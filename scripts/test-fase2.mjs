@@ -47,7 +47,7 @@ async function runTests() {
   const loginData = await loginRes.json();
   console.log(`Response Login:`, JSON.stringify(loginData, null, 2));
   
-  let accessToken = loginData.accessToken;
+  let accessToken = loginData.data?.accessToken;
   let rawCookies = loginRes.headers.get('set-cookie');
   let refreshTokenCookie = rawCookies ? rawCookies.split(';')[0] : '';
   
@@ -66,7 +66,7 @@ async function runTests() {
   const refreshData = await refreshRes.json();
   console.log(`Response Refresh:`, JSON.stringify(refreshData, null, 2));
   
-  let newAccessToken = refreshData.accessToken;
+  let newAccessToken = refreshData.data?.accessToken;
   console.log(`\nNew AccessToken: ${newAccessToken ? newAccessToken.substring(0, 20) + '...' : 'NONE'}`);
   console.log(`Apakah Token Berbeda?: ${accessToken !== newAccessToken ? 'YA' : 'TIDAK'}`);
 
@@ -101,7 +101,7 @@ async function runTests() {
     body: JSON.stringify({ identifier: email, password })
   });
   const loginData2 = await loginRes2.json();
-  const validAccessToken = loginData2.accessToken;
+  const validAccessToken = loginData2.data?.accessToken;
 
   const adminTestRes = await fetch(`${API_URL}/admin/users/pending`, {
     method: 'GET',
