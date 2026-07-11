@@ -2,6 +2,13 @@ import { Router } from 'express';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import * as userManagementController from './userManagement.controller';
+import * as reportsAdminController from './reportsAdmin.controller';
+import { validate } from '@/middlewares/validate.middleware';
+import {
+  adminListReportsQuerySchema,
+  createReportSchema,
+  updateReportSchema,
+} from '@/modules/reports/reports.schema';
 
 const router = Router();
 
@@ -87,5 +94,141 @@ router.post('/users/:id/approve', userManagementController.approveUser);
  *         description: User not found
  */
 router.post('/users/:id/reject', userManagementController.rejectUser);
+
+// --- Admin Reports ---
+/**
+ * @openapi
+ * tags:
+ *   name: Admin Reports
+ *   description: API untuk admin reports management
+ */
+
+/**
+ * @openapi
+ * /admin/reports:
+ *   get:
+ *     summary: List all reports for admin
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of reports
+ */
+router.get('/reports', validate(adminListReportsQuerySchema), reportsAdminController.listReports);
+/**
+ * @openapi
+ * /admin/reports/{id}:
+ *   get:
+ *     summary: Get report detail for admin
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Report detail
+ */
+router.get('/reports/:id', reportsAdminController.getReportDetail);
+/**
+ * @openapi
+ * /admin/reports:
+ *   post:
+ *     summary: Create report manually
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Created
+ */
+router.post('/reports', validate(createReportSchema), reportsAdminController.createManualReport);
+/**
+ * @openapi
+ * /admin/reports/{id}:
+ *   put:
+ *     summary: Update report as admin
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Updated
+ */
+router.put('/reports/:id', validate(updateReportSchema), reportsAdminController.updateReport);
+/**
+ * @openapi
+ * /admin/reports/{id}/assign:
+ *   post:
+ *     summary: Assign report
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Assigned
+ */
+router.post('/reports/:id/assign', reportsAdminController.assignReport);
+/**
+ * @openapi
+ * /admin/reports/{id}/archive:
+ *   post:
+ *     summary: Archive report
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Archived
+ */
+router.post('/reports/:id/archive', reportsAdminController.archiveReport);
+
+// Delete permanen khusus ADMIN_UTAMA
+/**
+ * @openapi
+ * /admin/reports/{id}/hard:
+ *   delete:
+ *     summary: Hard delete report
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted
+ */
+router.delete(
+  '/reports/:id/hard',
+  requireRole(['ADMIN_UTAMA']),
+  reportsAdminController.hardDeleteReport,
+);
 
 export default router;
