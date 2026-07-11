@@ -8,6 +8,7 @@ import { errorHandler } from '@/middlewares/error.middleware';
 import cookieParser from 'cookie-parser';
 import authRoutes from '@/modules/auth/auth.routes';
 import adminRoutes from '@/modules/admin/admin.routes';
+import reportsRoutes from '@/modules/reports/reports.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp(): Application {
   // Route modul lain di-mount di sini mulai Fase 2 dst
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/reports', reportsRoutes);
 
   app.use(errorHandler); // WAJIB paling akhir, setelah semua route
 

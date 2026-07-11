@@ -2,6 +2,13 @@ import { Router } from 'express';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import * as userManagementController from './userManagement.controller';
+import * as reportsAdminController from './reportsAdmin.controller';
+import { validate } from '@/middlewares/validate.middleware';
+import {
+  adminListReportsQuerySchema,
+  createReportSchema,
+  updateReportSchema,
+} from '@/modules/reports/reports.schema';
 
 const router = Router();
 
@@ -87,5 +94,21 @@ router.post('/users/:id/approve', userManagementController.approveUser);
  *         description: User not found
  */
 router.post('/users/:id/reject', userManagementController.rejectUser);
+
+// --- Admin Reports ---
+
+router.get('/reports', validate(adminListReportsQuerySchema), reportsAdminController.listReports);
+router.get('/reports/:id', reportsAdminController.getReportDetail);
+router.post('/reports', validate(createReportSchema), reportsAdminController.createManualReport);
+router.put('/reports/:id', validate(updateReportSchema), reportsAdminController.updateReport);
+router.post('/reports/:id/assign', reportsAdminController.assignReport);
+router.post('/reports/:id/archive', reportsAdminController.archiveReport);
+
+// Delete permanen khusus ADMIN_UTAMA
+router.delete(
+  '/reports/:id/hard',
+  requireRole(['ADMIN_UTAMA']),
+  reportsAdminController.hardDeleteReport,
+);
 
 export default router;

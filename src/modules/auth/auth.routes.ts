@@ -18,7 +18,7 @@ const router = Router();
 // Rate limiter khusus login (maksimal 5 percobaan per 15 menit per IP)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 50,
   message: {
     success: false,
     message: 'Terlalu banyak percobaan login dari IP ini, silakan coba lagi setelah 15 menit',
