@@ -160,10 +160,12 @@ export const getMyReportDetail = async (userId: string, reportId: string) => {
 export const getPublicTrackingStatus = async (trackingNumber: string) => {
   const report = await db.report.findUnique({
     where: { trackingNumber },
-    include: {
-      pelapor: {
-        select: { id: true, nama: true, noPegawai: true, unitKerja: true },
-      },
+    select: {
+      trackingNumber: true,
+      status: true,
+      jenisInsiden: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
 
@@ -171,5 +173,5 @@ export const getPublicTrackingStatus = async (trackingNumber: string) => {
     throw new ApiError(404, 'Laporan dengan nomor pelacakan tersebut tidak ditemukan');
   }
 
-  return maskAnonimReport(report);
+  return report;
 };
