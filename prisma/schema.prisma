@@ -1,0 +1,239 @@
+// prisma/schema.prisma
+// Schema database lengkap (Fase 1)
+// Prisma 7+: konfigurasi datasource URL dan environment loading ada di prisma.config.ts
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoleType {
+  USER
+  ADMIN
+  ADMIN_UTAMA
+}
+
+enum StatusVerifikasi {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JenisInsiden {
+  KTD
+  KNC
+  KTC
+  KPC
+  SENTINEL
+}
+
+enum GradingRisiko {
+  HIJAU
+  BIRU
+  KUNING
+  MERAH
+}
+
+enum StatusLaporan {
+  DRAFT
+  SUBMITTED
+  DALAM_INVESTIGASI
+  MENUNGGU_VERIFIKASI
+  SELESAI
+  OVERDUE
+  ARSIP
+}
+
+enum TipeFile {
+  JPG
+  PNG
+  PDF
+}
+
+enum TipeMedia {
+  TEXT
+  IMAGE
+  VIDEO
+}
+
+enum TipeNotifikasi {
+  LAPORAN_BARU
+  STATUS_BERUBAH
+  DEADLINE_MENDEKAT
+  DEADLINE_LEWAT
+  CHATBOT_DIJAWAB
+  PENGUMUMAN
+}
+
+enum StatusEskalasiChatbot {
+  TERJAWAB_OTOMATIS
+  MENUNGGU_ADMIN
+  DIJAWAB_ADMIN
+}
+
+enum TargetRole {
+  SEMUA
+  USER
+  ADMIN
+}
+
+model User {
+  id               String           @id @default(uuid())
+  nama             String
+  email            String           @unique
+  noPegawai        String           @unique @map("no_pegawai")
+  passwordHash     String           @map("password_hash")
+  role             RoleType         @default(USER)
+  unitKerja        String           @map("unit_kerja")
+  fotoProfil       String?          @map("foto_profil")
+  statusVerifikasi StatusVerifikasi @default(PENDING) @map("status_verifikasi")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  reports          Report[]         @relation("Pelapor")
+  reportHistories  ReportHistory[]  @relation("Actor")
+  chatbotLogs      ChatbotLog[]
+  notifications    Notification[]
+  announcements    Announcement[]
+  assignedReports  Report[]         @relation("AssignedAdmin")
+
+  @@index([email])
+  @@index([noPegawai])
+  @@map("users")
+}
+
+model Report {
+  id                  String         @id @default(uuid())
+  trackingNumber      String?        @unique @map("tracking_number")
+  jenisInsiden        JenisInsiden   @map("jenis_insiden")
+  tanggalKejadian     DateTime       @map("tanggal_kejadian")
+  lokasi              String
+  unitKerja           String         @map("unit_kerja")
+  kronologi           String         @db.Text
+  dampak              String         @db.Text
+  gradingAwal         GradingRisiko  @map("grading_awal")
+  gradingFinal        GradingRisiko? @map("grading_final")
+  status              StatusLaporan  @default(DRAFT)
+  isAnonim            Boolean        @default(false) @map("is_anonim")
+  catatanInvestigasi  String?        @db.Text @map("catatan_investigasi")
+  deadlineInvestigasi DateTime?      @map("deadline_investigasi")
+  assignedToId        String?        @map("assigned_to_id")
+  pelaporId           String         @map("pelapor_id")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+  deletedAt           DateTime?      @map("deleted_at")
+
+  pelapor             User               @relation("Pelapor", fields: [pelaporId], references: [id])
+  assignedTo          User?              @relation("AssignedAdmin", fields: [assignedToId], references: [id])
+  attachments         ReportAttachment[]
+  histories           ReportHistory[]
+
+  @@index([status])
+  @@index([jenisInsiden])
+  @@index([createdAt])
+  @@index([status, unitKerja])
+  @@map("reports")
+}
+
+model ReportAttachment {
+  id         String   @id @default(uuid())
+  reportId   String   @map("report_id")
+  fileUrl    String   @map("file_url")
+  objectPath String   @map("object_path")
+  tipeFile   TipeFile @map("tipe_file")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_attachments")
+}
+
+model ReportHistory {
+  id         String   @id @default(uuid())
+  reportId   String   @map("report_id")
+  actorId    String   @map("actor_id")
+  aksi       String
+  perubahan  Json
+  timestamp  DateTime @default(now())
+
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  actor      User     @relation("Actor", fields: [actorId], references: [id])
+
+  @@index([reportId])
+  @@index([actorId])
+  @@map("report_histories")
+}
+
+model Guide {
+  id         String    @id @default(uuid())
+  judul      String
+  kategori   String
+  konten     String    @db.Text
+  tipeMedia  TipeMedia @default(TEXT) @map("tipe_media")
+  mediaUrl   String?   @map("media_url")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("guides")
+}
+
+model ChatbotKnowledge {
+  id         String   @id @default(uuid())
+  pertanyaan String
+  jawaban    String   @db.Text
+  kategori   String
+  kataKunci  String[] @map("kata_kunci")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("chatbot_knowledges")
+}
+
+model ChatbotLog {
+  id             String                @id @default(uuid())
+  userId         String                @map("user_id")
+  pertanyaan     String
+  jawaban        String?               @db.Text
+  statusEskalasi StatusEskalasiChatbot @default(TERJAWAB_OTOMATIS) @map("status_eskalasi")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  user           User                  @relation(fields: [userId], references: [id])
+
+  @@index([statusEskalasi])
+  @@map("chatbot_logs")
+}
+
+model Notification {
+  id         String         @id @default(uuid())
+  userId     String         @map("user_id")
+  tipe       TipeNotifikasi
+  pesan      String
+  isRead     Boolean        @default(false) @map("is_read")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  user       User           @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Announcement {
+  id         String     @id @default(uuid())
+  adminId    String     @map("admin_id")
+  judul      String
+  isi        String     @db.Text
+  targetRole TargetRole @default(SEMUA) @map("target_role")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  admin      User       @relation(fields: [adminId], references: [id])
+
+  @@map("announcements")
+}

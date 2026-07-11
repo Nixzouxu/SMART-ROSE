@@ -5,10 +5,10 @@ services:
     container_name: smartrose-postgres-dev
     environment:
       POSTGRES_USER: smartrose
-      POSTGRES_PASSWORD: smartrose_dev_pass
+      POSTGRES_PASSWORD: smartrosedev123
       POSTGRES_DB: smartrose_dev
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
