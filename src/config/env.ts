@@ -27,8 +27,14 @@ const baseSchema = z.object({
 
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((v) => v === 'true'),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 
   STORAGE_PROVIDER: z.enum(['local', 'supabase']).default('local'),
 });
@@ -37,7 +43,11 @@ const localStorageSchema = z.object({
   STORAGE_PROVIDER: z.literal('local'),
   MINIO_ENDPOINT: z.string().min(1),
   MINIO_PORT: z.coerce.number().default(9000),
-  MINIO_USE_SSL: z.coerce.boolean().default(false),
+  MINIO_USE_SSL: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((v) => v === 'true'),
   MINIO_ACCESS_KEY: z.string().min(1),
   MINIO_SECRET_KEY: z.string().min(1),
   MINIO_BUCKET: z.string().min(1),
