@@ -119,6 +119,14 @@ async function runTests() {
   const anonimReportId = anonimData.data.id;
   console.log(`Anonim Laporan Dibuat: ID ${anonimReportId}`);
 
+  // --- 6.2. Akses Tracking Publik Laporan Anonim ---
+  const anonimTrackingNumber = anonimData.data.trackingNumber;
+  console.log(`\n[6.2] Akses Tracking Publik Laporan Anonim (${anonimTrackingNumber})`);
+  const anonTrackRes = await fetch(`${API_URL}/reports/track/${anonimTrackingNumber}`);
+  const anonTrackData = await anonTrackRes.json();
+  console.log('Data Track Anonim (Publik - pelaporId HARUS undefined/null):', JSON.stringify(anonTrackData.data, null, 2));
+
+
   // Admin perlu lihat laporan anonim untuk membuktikan pelaporId disembunyikan
   // Tapi route detail admin tidak di-mask. 
   // Kita coba ambil menggunakan API /reports/me/:id dengan User 2 (Seharusnya 403 krn bukan milik dia)
@@ -231,6 +239,19 @@ async function runTests() {
   const deleteHardAdminData = await deleteHardAdminRes.json();
   console.log(`Status Hard Delete (Admin): ${deleteHardAdminRes.status}`);
   console.log(`Pesan Berhasil: ${deleteHardAdminData.message}`);
+
+  // --- 12.2 Tes Admin Membaca Laporan Anonim ---
+  console.log(`\n[12.2] Admin Utama Melihat Detail Laporan Anonim (Id: ${anonimReportId})`);
+  const adminGetAnonRes = await fetch(`${API_URL}/admin/reports/${anonimReportId}`, {
+    headers: { 'Authorization': `Bearer ${tokenAdmin}` }
+  });
+  const adminGetAnonData = await adminGetAnonRes.json();
+  console.log('Data Laporan Anonim (Admin - pelaporId HARUS ADA):', JSON.stringify({
+    id: adminGetAnonData.data.id,
+    pelaporId: adminGetAnonData.data.pelaporId,
+    pelapor: adminGetAnonData.data.pelapor
+  }, null, 2));
+
 
   await dbClient.end();
   console.log('\n=== SELESAI ===');
