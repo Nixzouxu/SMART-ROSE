@@ -26,9 +26,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       res.status(200).json({
         success: true,
         message: 'OTP telah dikirim ke email Anda',
-        requiresOtp: true,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        email: (result as any).email,
+        data: {
+          requiresOtp: true,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          email: (result as any).email,
+        },
       });
       return;
     }
@@ -40,7 +42,10 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     res.status(200).json({
       success: true,
-      accessToken,
+      message: 'Login berhasil',
+      data: {
+        accessToken,
+      },
     });
   } catch (error) {
     next(error);
@@ -56,7 +61,10 @@ export const verifyLoginOtp = async (req: Request, res: Response, next: NextFunc
 
     res.status(200).json({
       success: true,
-      accessToken: result.accessToken,
+      message: 'OTP berhasil diverifikasi',
+      data: {
+        accessToken: result.accessToken,
+      },
     });
   } catch (error) {
     next(error);
@@ -83,7 +91,10 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     res.status(200).json({
       success: true,
-      accessToken,
+      message: 'Token berhasil diperbarui',
+      data: {
+        accessToken,
+      },
     });
   } catch (error) {
     next(error);
