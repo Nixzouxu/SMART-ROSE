@@ -4,6 +4,7 @@ import { db } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
 import { generateTrackingNumber } from '@/modules/reports/trackingNumber.util';
 import { Prisma } from '@prisma/client';
+import { regradeReport } from './regrade.service';
 
 export const listReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -274,6 +275,24 @@ export const hardDeleteReport = async (req: AuthRequest, res: Response, next: Ne
       success: true,
       message: 'Laporan berhasil dihapus permanen',
       data: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const regradeReportHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const adminId = req.user!.userId;
+    const reportId = req.params.id as string;
+    const { gradingBaru, alasan } = req.body as { gradingBaru: string; alasan: string };
+
+    const result = await regradeReport(adminId, reportId, gradingBaru, alasan);
+
+    res.status(200).json({
+      success: true,
+      message: 'Grading laporan berhasil diubah',
+      data: result,
     });
   } catch (error) {
     next(error);
