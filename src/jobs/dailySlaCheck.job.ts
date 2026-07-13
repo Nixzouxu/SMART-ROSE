@@ -4,7 +4,8 @@
 // Job ini melakukan dua hal setiap hari:
 //
 // 1. DEADLINE_MENDEKAT: Kirim notifikasi ke admin yang di-assign untuk laporan
-//    yang deadlineInvestigasi <= 2 hari dari sekarang (dan belum OVERDUE/SELESAI/ARSIP).
+//    yang deadlineInvestigasi <= 3 hari dari sekarang (dan belum OVERDUE/SELESAI/ARSIP).
+//    Jendela 3 hari memberi admin waktu yang cukup untuk merespons sebelum terlambat.
 //
 // 2. AUTO_ESCALATE_OVERDUE: Ubah status laporan yang deadlineInvestigasi sudah
 //    lewat menjadi OVERDUE dan catat ReportHistory dengan actorId = user sistem
@@ -20,7 +21,7 @@ import { logger } from '@/utils/logger';
 import { createNotification } from '@/modules/notifications/notifications.service';
 
 const SYSTEM_USER_EMAIL = 'system@smartrose.internal';
-const HARI_PERINGATAN_DEADLINE = 2;
+const HARI_PERINGATAN_DEADLINE = 3;
 
 /**
  * Jalankan pengecekan SLA harian.
@@ -48,7 +49,7 @@ async function cekDeadlineMendekat(sekarang: Date): Promise<void> {
   // Ambil laporan yang:
   // - deadlineInvestigasi ada
   // - deadlineInvestigasi > sekarang (belum terlampaui, untuk membedakan dari overdue)
-  // - deadlineInvestigasi <= sekarang + 2 hari
+  // - deadlineInvestigasi <= sekarang + 3 hari
   // - statusnya masih aktif (bukan SELESAI, OVERDUE, ARSIP)
   // - ada admin yang di-assign
   const laporan = await db.report.findMany({

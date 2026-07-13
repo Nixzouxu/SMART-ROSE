@@ -4,15 +4,18 @@
  *
  * Menguji:
  * 1. Setup: buat admin dan laporan uji coba dengan deadline sudah set
- * 2. Endpoint regrade: HIJAU -> KUNING, verifikasi deadline baru dari sekarang
+ * 2. Endpoint regrade via PUT: HIJAU -> KUNING, verifikasi deadline baru 45 hari dari sekarang
  * 3. Simulasi job SLA:
- *    a. DEADLINE_MENDEKAT: laporan dengan deadline 2 hari dari sekarang
+ *    a. DEADLINE_MENDEKAT: laporan dengan deadline 2 hari dari sekarang (masuk window <= 3 hari)
  *       -> notifikasi DEADLINE_MENDEKAT muncul di tabel Notification untuk admin yang di-assign
  *    b. AUTO_ESCALATE_OVERDUE: laporan dengan deadline kemarin
  *       -> status berubah jadi OVERDUE
  *       -> ReportHistory dengan actorId = system user (bukan admin biasa)
  *       -> notifikasi DEADLINE_LEWAT muncul di tabel Notification
  * 4. Verifikasi database langsung via query SQL
+ *
+ * SLA yang benar (aturan bisnis keselamatan pasien):
+ *   HIJAU = 14 hari, BIRU = 14 hari, KUNING = 45 hari, MERAH = 45 hari
  */
 
 import pg from 'pg';
@@ -29,7 +32,7 @@ let tokenAdmin;
 let adminId;
 let reportDeadlineMendekatId;
 let reportOverdueId;
-let adminAssignedId; // ID admin yang di-assign ke laporan
+let adminAssignedId;
 
 function pass(msg) {
   console.log(`  [PASS] ${msg}`);
@@ -55,10 +58,12 @@ async function setup() {
 
   // Verifikasi user sistem ada di database
   const sysUserResult = await dbClient.query(
-    `SELECT id, nama, email FROM users WHERE email = 'system@smartrose.internal'`
+    `SELECT id, nama, email FROM users WHERE email = 'system@smartrose.internal'`,
   );
   if (sysUserResult.rows.length === 0) {
-    fail('User sistem "system@smartrose.internal" TIDAK DITEMUKAN di database! Jalankan: npx prisma db seed');
+    fail(
+      'User sistem "system@smartrose.internal" TIDAK DITEMUKAN di database! Jalankan: npx prisma db seed',
+    );
     process.exit(1);
   }
   const systemUserId = sysUserResult.rows[0].id;
@@ -88,15 +93,15 @@ async function setup() {
   // Set role ADMIN_UTAMA dan APPROVED langsung di DB
   await dbClient.query(
     `UPDATE users SET status_verifikasi = 'APPROVED', role = 'ADMIN_UTAMA' WHERE email = $1`,
-    [emailAdmin]
+    [emailAdmin],
   );
 
   // Ambil adminId
   const adminRow = await dbClient.query(`SELECT id FROM users WHERE email = $1`, [emailAdmin]);
   adminId = adminRow.rows[0].id;
-  adminAssignedId = adminId; // Gunakan admin ini juga sebagai assigned admin
+  adminAssignedId = adminId;
 
-  // Login admin (akan minta OTP karena ADMIN_UTAMA)
+  // Login admin (ADMIN_UTAMA membutuhkan OTP)
   const loginRes = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -163,7 +168,7 @@ async function buatLaporanDenganDeadline(label, deadlineDate, gradingFinal) {
 
   const reportId = createData.data.id;
 
-  // Set deadline, gradingFinal, status, dan assigned_to_id langsung di DB
+  // Set deadline, gradingFinal, status DALAM_INVESTIGASI, dan assigned_to_id langsung di DB
   await dbClient.query(
     `UPDATE reports SET deadline_investigasi = $1, grading_final = $2, assigned_to_id = $3, status = 'DALAM_INVESTIGASI' WHERE id = $4`,
     [deadlineDate, gradingFinal, adminAssignedId, reportId],
@@ -175,32 +180,34 @@ async function buatLaporanDenganDeadline(label, deadlineDate, gradingFinal) {
   return reportId;
 }
 
-
 async function testRegrading(systemUserId) {
-  section('TES 1: Endpoint Regrade (HIJAU -> KUNING)');
+  section('TES 1: Endpoint PUT /regrade (HIJAU -> KUNING, deadline 45 hari)');
 
-  // Buat laporan untuk di-regrade (deadline lama tidak relevan, akan diganti)
-  const deadlineLama = new Date();
-  deadlineLama.setDate(deadlineLama.getDate() + 90); // Asumsi HIJAU = 90 hari
+  // Buat laporan dengan grading HIJAU (SLA: 14 hari)
+  // Deadline lama dibuat 14 hari ke depan sesuai SLA HIJAU
+  const deadlineLama = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
   const reportId = await buatLaporanDenganDeadline('Regrade Test', deadlineLama, 'HIJAU');
 
-  // Ambil deadline sebelum regrade untuk perbandingan
+  // Ambil deadline sebelum regrade
   const beforeRow = await dbClient.query(
     `SELECT deadline_investigasi, grading_final FROM reports WHERE id = $1`,
-    [reportId]
+    [reportId],
   );
   const deadlineSebelum = beforeRow.rows[0].deadline_investigasi;
   const gradingSebelum = beforeRow.rows[0].grading_final ?? 'HIJAU';
 
   console.log(`\n  Grading sebelum  : ${gradingSebelum}`);
-  console.log(`  Deadline sebelum : ${deadlineSebelum ? new Date(deadlineSebelum).toISOString() : 'null'}`);
+  console.log(
+    `  Deadline sebelum : ${deadlineSebelum ? new Date(deadlineSebelum).toISOString() : 'null'}`,
+  );
 
-  const waktuSebelumRegrade = new Date();
+  // Catat waktu tepat sebelum panggil API (untuk verifikasi deadline baru)
+  const tSebelumRegrade = Date.now();
 
-  // Panggil endpoint regrade via HTTP nyata
+  // Panggil endpoint regrade via PUT (bukan POST lagi)
   const regradeRes = await fetch(`${API_URL}/admin/reports/${reportId}/regrade`, {
-    method: 'POST',
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${tokenAdmin}`,
@@ -211,50 +218,81 @@ async function testRegrading(systemUserId) {
     }),
   });
 
+  const tSetelahRegrade = Date.now();
+
   const regradeData = await regradeRes.json();
-  console.log(`\n  HTTP Status Regrade: ${regradeRes.status}`);
-  console.log(`  Response:`, JSON.stringify(regradeData, null, 2));
+  console.log(`\n  HTTP Method      : PUT`);
+  console.log(`  HTTP Status      : ${regradeRes.status}`);
+  console.log(`  Response:`);
+  console.log(JSON.stringify(regradeData, null, 2).replace(/^/gm, '    '));
 
   if (regradeRes.status !== 200) {
     fail(`Regrade gagal, status: ${regradeRes.status}`);
     return;
   }
-  pass(`Regrade HTTP response 200 OK`);
+  pass(`Regrade HTTP response 200 OK dengan method PUT`);
 
   // Verifikasi langsung di database
   const afterRow = await dbClient.query(
-    `SELECT grading_final, deadline_investigasi FROM reports WHERE id = $1`,
-    [reportId]
+    `SELECT grading_final FROM reports WHERE id = $1`,
+    [reportId],
   );
   const gradingBaru = afterRow.rows[0].grading_final;
-  const deadlineBaru = new Date(afterRow.rows[0].deadline_investigasi);
+  
+  // Ambil deadline dari respons HTTP API karena driver pg mengkonversi `timestamp` ke local time
+  const deadlineBaruStr = regradeData.data.report.deadlineInvestigasi;
+  const deadlineBaru = new Date(deadlineBaruStr);
 
   console.log(`\n  Verifikasi Database Langsung:`);
   console.log(`  Grading setelah  : ${gradingBaru}`);
   console.log(`  Deadline setelah : ${deadlineBaru.toISOString()}`);
 
-  // Verifikasi grading berubah
   if (gradingBaru === 'KUNING') {
     pass(`gradingFinal berhasil diubah ke KUNING`);
   } else {
     fail(`gradingFinal seharusnya KUNING, tapi: ${gradingBaru}`);
   }
 
-  // Verifikasi deadline baru adalah sekitar 45 hari dari SEKARANG (KUNING = 45 hari)
-  // Toleransi 0.5 hari untuk mengakomodasi perbedaan timezone (WIB +7 jam vs UTC)
-  const selisihHari = (deadlineBaru.getTime() - waktuSebelumRegrade.getTime()) / (1000 * 60 * 60 * 24);
-  if (selisihHari >= 44.5 && selisihHari <= 45.5) {
+  // Verifikasi deadline baru: KUNING = 45 hari dari sekarang (implementasi UTC milidetik)
+  // tSebelumRegrade dan tSetelahRegrade adalah batas interval, server menghitung di tengahnya.
+  // Toleransi: 5 detik (bukan jam!) - cukup untuk network round-trip dan processing time
+  const TOLERANSI_MS = 5 * 1000; // 5 detik
+  const KUNING_HARI = 45;
+  const KUNING_MS = KUNING_HARI * 24 * 60 * 60 * 1000;
+
+  const deadlineMinExpected = tSebelumRegrade + KUNING_MS;
+  const deadlineMaxExpected = tSetelahRegrade + KUNING_MS + TOLERANSI_MS;
+
+  const deadlineBaruMs = deadlineBaru.getTime();
+  const selisihHariDariSekarang =
+    (deadlineBaruMs - (tSebelumRegrade + tSetelahRegrade) / 2) / (24 * 60 * 60 * 1000);
+
+  console.log(`\n  Verifikasi Deadline (KUNING = 45 hari, implementasi UTC milidetik):`);
+  console.log(`  Deadline baru (ms)         : ${deadlineBaruMs}`);
+  console.log(`  Expected min (ms)          : ${deadlineMinExpected}`);
+  console.log(`  Expected max (ms)          : ${deadlineMaxExpected}`);
+  console.log(`  Selisih dari midpoint      : ${selisihHariDariSekarang.toFixed(6)} hari`);
+  console.log(`  Toleransi test             : ${TOLERANSI_MS / 1000} detik (bukan jam)`);
+
+  if (deadlineBaruMs >= deadlineMinExpected && deadlineBaruMs <= deadlineMaxExpected) {
     pass(
-      `Deadline baru = ~${selisihHari.toFixed(2)} hari dari sekarang (expected: 45 hari untuk KUNING) - BENAR`,
+      `Deadline baru = ~${selisihHariDariSekarang.toFixed(4)} hari dari sekarang ` +
+        `(expected: 45 hari untuk KUNING, toleransi ±5 detik) - BENAR`,
     );
   } else {
-    fail(`Deadline baru seharusnya ~45 hari dari sekarang, tapi selisih: ${selisihHari.toFixed(2)} hari`);
+    fail(
+      `Deadline baru di luar range yang diharapkan. ` +
+        `Selisih dari 45 hari: ${(selisihHariDariSekarang - 45).toFixed(6)} hari = ` +
+        `${((selisihHariDariSekarang - 45) * 24).toFixed(2)} jam`,
+    );
   }
 
-  // Verifikasi ReportHistory ada dengan gradingLama dan gradingBaru yang benar
+  // Verifikasi ReportHistory
   const historyRow = await dbClient.query(
-    `SELECT id, actor_id, aksi, perubahan FROM report_histories WHERE report_id = $1 AND aksi = 'REGRADE' ORDER BY timestamp DESC LIMIT 1`,
-    [reportId]
+    `SELECT id, actor_id, aksi, perubahan FROM report_histories
+     WHERE report_id = $1 AND aksi = 'REGRADE'
+     ORDER BY timestamp DESC LIMIT 1`,
+    [reportId],
   );
 
   if (historyRow.rows.length === 0) {
@@ -263,7 +301,8 @@ async function testRegrading(systemUserId) {
   }
 
   const history = historyRow.rows[0];
-  const perubahan = typeof history.perubahan === 'string' ? JSON.parse(history.perubahan) : history.perubahan;
+  const perubahan =
+    typeof history.perubahan === 'string' ? JSON.parse(history.perubahan) : history.perubahan;
 
   console.log(`\n  ReportHistory Database:`);
   console.log(`  actor_id   : ${history.actor_id}`);
@@ -298,24 +337,22 @@ async function testRegrading(systemUserId) {
 async function persiapanLaporanSLA() {
   section('PERSIAPAN: Buat Laporan untuk Uji Coba SLA Job');
 
-  // Laporan 1: Deadline 1 hari dari sekarang (masuk window "mendekat")
-  const deadline2Hari = new Date();
-  deadline2Hari.setDate(deadline2Hari.getDate() + 1); // 1 hari dari sekarang (dalam window <= 2 hari)
+  // Laporan 1: Deadline 2 hari dari sekarang (masuk window HARI_PERINGATAN_DEADLINE=3 hari)
+  const deadline2Hari = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
 
   reportDeadlineMendekatId = await buatLaporanDenganDeadline(
-    'Deadline Mendekat (1 hari)',
+    'Deadline Mendekat (2 hari dari sekarang, masuk window 3 hari)',
     deadline2Hari,
-    'MERAH'
+    'MERAH',
   );
 
   // Laporan 2: Deadline kemarin (sudah overdue)
-  const deadlineKemarin = new Date();
-  deadlineKemarin.setDate(deadlineKemarin.getDate() - 1); // kemarin
+  const deadlineKemarin = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   reportOverdueId = await buatLaporanDenganDeadline(
     'Overdue (deadline kemarin)',
     deadlineKemarin,
-    'KUNING'
+    'KUNING',
   );
 
   pass(`Laporan DEADLINE_MENDEKAT: id=${reportDeadlineMendekatId}`);
@@ -323,9 +360,9 @@ async function persiapanLaporanSLA() {
 }
 
 async function testJobSLA(systemUserId) {
-  section('TES 2: Panggil SLA Job via HTTP Trigger Endpoint');
+  section('TES 2: Trigger SLA Job via POST /admin/jobs/sla-check');
 
-  // Panggil endpoint trigger job (POST /admin/jobs/sla-check)
+  // Trigger job via HTTP
   const jobRes = await fetch(`${API_URL}/admin/jobs/sla-check`, {
     method: 'POST',
     headers: {
@@ -350,25 +387,15 @@ async function testJobSLA(systemUserId) {
   // --- Verifikasi DEADLINE_MENDEKAT ---
   console.log(`\n  [Verifikasi] DEADLINE_MENDEKAT untuk laporan ${reportDeadlineMendekatId}:`);
 
+  // Cari notif DEADLINE_MENDEKAT terbaru untuk admin ini
   const notifMendekatRow = await dbClient.query(
     `SELECT id, user_id, tipe, pesan, created_at FROM notifications
-     WHERE user_id = $1 AND tipe = 'DEADLINE_MENDEKAT' AND pesan LIKE '%${reportDeadlineMendekatId.substring(0, 8)}%'
+     WHERE user_id = $1 AND tipe = 'DEADLINE_MENDEKAT'
      ORDER BY created_at DESC LIMIT 1`,
-    [adminAssignedId]
+    [adminAssignedId],
   );
 
-  // Coba juga tanpa filter pesan (kalau format pesan menggunakan trackingNumber bukan id)
-  let notifMendekat = notifMendekatRow.rows[0];
-  if (!notifMendekat) {
-    // Cari notif terbaru DEADLINE_MENDEKAT untuk admin ini
-    const notifMendekatRow2 = await dbClient.query(
-      `SELECT id, user_id, tipe, pesan, created_at FROM notifications
-       WHERE user_id = $1 AND tipe = 'DEADLINE_MENDEKAT'
-       ORDER BY created_at DESC LIMIT 1`,
-      [adminAssignedId]
-    );
-    notifMendekat = notifMendekatRow2.rows[0];
-  }
+  const notifMendekat = notifMendekatRow.rows[0];
 
   if (notifMendekat) {
     pass(`Notifikasi DEADLINE_MENDEKAT ditemukan di tabel Notification:`);
@@ -378,17 +405,17 @@ async function testJobSLA(systemUserId) {
     console.log(`    pesan      : ${notifMendekat.pesan}`);
     console.log(`    created_at : ${notifMendekat.created_at}`);
   } else {
-    fail(`Notifikasi DEADLINE_MENDEKAT TIDAK ditemukan di tabel Notification untuk admin ${adminAssignedId}`);
+    fail(
+      `Notifikasi DEADLINE_MENDEKAT TIDAK ditemukan di tabel Notification untuk admin ${adminAssignedId}`,
+    );
   }
 
   // --- Verifikasi AUTO_ESCALATE_OVERDUE ---
   console.log(`\n  [Verifikasi] AUTO_ESCALATE_OVERDUE untuk laporan ${reportOverdueId}:`);
 
-  // Cek status laporan berubah ke OVERDUE
-  const statusRow = await dbClient.query(
-    `SELECT status FROM reports WHERE id = $1`,
-    [reportOverdueId]
-  );
+  const statusRow = await dbClient.query(`SELECT status FROM reports WHERE id = $1`, [
+    reportOverdueId,
+  ]);
   const statusBaru = statusRow.rows[0]?.status;
 
   console.log(`    Status laporan sekarang: ${statusBaru}`);
@@ -406,16 +433,19 @@ async function testJobSLA(systemUserId) {
      JOIN users u ON u.id = rh.actor_id
      WHERE rh.report_id = $1 AND rh.aksi = 'AUTO_ESCALATE_OVERDUE'
      ORDER BY rh.timestamp DESC LIMIT 1`,
-    [reportOverdueId]
+    [reportOverdueId],
   );
 
   if (historyOverdueRow.rows.length === 0) {
-    fail(`ReportHistory AUTO_ESCALATE_OVERDUE TIDAK ditemukan untuk laporan ${reportOverdueId}`);
+    fail(
+      `ReportHistory AUTO_ESCALATE_OVERDUE TIDAK ditemukan untuk laporan ${reportOverdueId}`,
+    );
   } else {
     const histOverdue = historyOverdueRow.rows[0];
-    const perubahanOverdue = typeof histOverdue.perubahan === 'string'
-      ? JSON.parse(histOverdue.perubahan)
-      : histOverdue.perubahan;
+    const perubahanOverdue =
+      typeof histOverdue.perubahan === 'string'
+        ? JSON.parse(histOverdue.perubahan)
+        : histOverdue.perubahan;
 
     console.log(`\n    ReportHistory AUTO_ESCALATE_OVERDUE:`);
     console.log(`    id           : ${histOverdue.id}`);
@@ -426,15 +456,21 @@ async function testJobSLA(systemUserId) {
     console.log(`    perubahan    :`, JSON.stringify(perubahanOverdue, null, 6));
 
     if (histOverdue.actor_id === systemUserId) {
-      pass(`actorId di ReportHistory = system user id (${systemUserId}) - BUKAN admin biasa - BENAR`);
+      pass(
+        `actorId di ReportHistory = system user id (${systemUserId}) - BUKAN admin biasa - BENAR`,
+      );
     } else {
-      fail(`actorId seharusnya system user id=${systemUserId}, tapi: ${histOverdue.actor_id}`);
+      fail(
+        `actorId seharusnya system user id=${systemUserId}, tapi: ${histOverdue.actor_id}`,
+      );
     }
 
     if (histOverdue.actor_email === 'system@smartrose.internal') {
       pass(`actor_email = system@smartrose.internal - BENAR`);
     } else {
-      fail(`actor_email seharusnya system@smartrose.internal, tapi: ${histOverdue.actor_email}`);
+      fail(
+        `actor_email seharusnya system@smartrose.internal, tapi: ${histOverdue.actor_email}`,
+      );
     }
   }
 
@@ -443,7 +479,7 @@ async function testJobSLA(systemUserId) {
     `SELECT id, user_id, tipe, pesan, created_at FROM notifications
      WHERE user_id = $1 AND tipe = 'DEADLINE_LEWAT'
      ORDER BY created_at DESC LIMIT 1`,
-    [adminAssignedId]
+    [adminAssignedId],
   );
 
   if (notifLewatRow.rows.length > 0) {
@@ -465,7 +501,11 @@ async function main() {
   console.log('====================================================');
   console.log(`  Timestamp : ${new Date().toISOString()}`);
   console.log(`  API URL   : ${API_URL}`);
-  console.log(`  DB URL    : ${DB_URL}\n`);
+  console.log(`  DB URL    : ${DB_URL}`);
+  console.log(`\n  SLA Aturan Bisnis:`);
+  console.log(`    HIJAU = 14 hari, BIRU = 14 hari`);
+  console.log(`    KUNING = 45 hari, MERAH = 45 hari`);
+  console.log(`  Jendela DEADLINE_MENDEKAT: <= 3 hari\n`);
 
   try {
     const systemUserId = await setup();

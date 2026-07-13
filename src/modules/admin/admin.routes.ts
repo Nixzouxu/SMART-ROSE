@@ -236,7 +236,7 @@ router.delete(
 /**
  * @openapi
  * /admin/reports/{id}/regrade:
- *   post:
+ *   put:
  *     summary: Regrade laporan (ubah grading risiko dan hitung ulang deadline SLA)
  *     tags: [Admin Reports]
  *     security:
@@ -265,13 +265,13 @@ router.delete(
  *                 minLength: 10
  *     responses:
  *       200:
- *         description: Grading berhasil diubah, deadline baru dihitung dari sekarang
+ *         description: Grading berhasil diubah, deadline baru dihitung dari sekarang (UTC)
  *       400:
  *         description: Input tidak valid
  *       404:
  *         description: Laporan tidak ditemukan
  */
-router.post(
+router.put(
   '/reports/:id/regrade',
   validate(regradeReportSchema),
   reportsAdminController.regradeReportHandler,
