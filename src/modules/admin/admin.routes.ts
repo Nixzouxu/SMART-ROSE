@@ -3,12 +3,14 @@ import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import * as userManagementController from './userManagement.controller';
 import * as reportsAdminController from './reportsAdmin.controller';
+import * as adminJobsController from './adminJobs.controller';
 import { validate } from '@/middlewares/validate.middleware';
 import {
   adminListReportsQuerySchema,
   createReportSchema,
   updateReportSchema,
 } from '@/modules/reports/reports.schema';
+import { regradeReportSchema } from './regrade.schema';
 
 const router = Router();
 
@@ -230,5 +232,66 @@ router.delete(
   requireRole(['ADMIN_UTAMA']),
   reportsAdminController.hardDeleteReport,
 );
+
+/**
+ * @openapi
+ * /admin/reports/{id}/regrade:
+ *   post:
+ *     summary: Regrade laporan (ubah grading risiko dan hitung ulang deadline SLA)
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - gradingBaru
+ *               - alasan
+ *             properties:
+ *               gradingBaru:
+ *                 type: string
+ *                 enum: [HIJAU, BIRU, KUNING, MERAH]
+ *               alasan:
+ *                 type: string
+ *                 minLength: 10
+ *     responses:
+ *       200:
+ *         description: Grading berhasil diubah, deadline baru dihitung dari sekarang
+ *       400:
+ *         description: Input tidak valid
+ *       404:
+ *         description: Laporan tidak ditemukan
+ */
+router.post(
+  '/reports/:id/regrade',
+  validate(regradeReportSchema),
+  reportsAdminController.regradeReportHandler,
+);
+
+// --- Admin Jobs (manual trigger) ---
+/**
+ * @openapi
+ * /admin/jobs/sla-check:
+ *   post:
+ *     summary: Trigger SLA check secara manual (ADMIN_UTAMA only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: SLA check berhasil dijalankan
+ *       403:
+ *         description: Hanya ADMIN_UTAMA yang bisa trigger ini
+ */
+router.post('/jobs/sla-check', requireRole(['ADMIN_UTAMA']), adminJobsController.triggerSlaCheck);
 
 export default router;
