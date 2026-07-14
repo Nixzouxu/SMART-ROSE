@@ -81,6 +81,26 @@ enum TargetRole {
   ADMIN
 }
 
+enum StatusRca {
+  DRAFT
+  FINAL
+}
+
+enum KategoriFishbone {
+  MAN
+  METHOD
+  MATERIAL
+  MACHINE
+  MEASUREMENT
+  ENVIRONMENT
+}
+
+enum StatusRencanaPerbaikan {
+  BELUM_MULAI
+  BERJALAN
+  SELESAI
+}
+
 model User {
   id               String           @id @default(uuid())
   nama             String
@@ -101,6 +121,7 @@ model User {
   notifications    Notification[]
   announcements    Announcement[]
   assignedReports  Report[]         @relation("AssignedAdmin")
+  rcaDisusun       RootCauseAnalysis[] @relation("RcaDisusunOleh")
 
   @@index([email])
   @@index([noPegawai])
@@ -132,6 +153,7 @@ model Report {
   assignedTo          User?              @relation("AssignedAdmin", fields: [assignedToId], references: [id])
   attachments         ReportAttachment[]
   histories           ReportHistory[]
+  rca                 RootCauseAnalysis?
 
   @@index([status])
   @@index([jenisInsiden])
@@ -236,4 +258,118 @@ model Announcement {
   admin      User       @relation(fields: [adminId], references: [id])
 
   @@map("announcements")
+}
+
+model RootCauseAnalysis {
+  id                  String         @id @default(uuid())
+  reportId            String         @unique @map("report_id")
+  timKetua            String?        @map("tim_ketua")
+  timSekretaris       String?        @map("tim_sekretaris")
+  timAnggota          String[]       @map("tim_anggota")
+  observasi           String?        @db.Text
+  dokumentasi         String?        @db.Text
+  kronologiSingkat    String         @db.Text @map("kronologi_singkat")
+  tipeSubInsiden      String?        @map("tipe_sub_insiden")
+  tindakanSesuaiBands String?        @db.Text @map("tindakan_sesuai_bands")
+  daftarInterviewee   String[]       @map("daftar_interviewee")
+  masalahAwal5Why     String         @db.Text @map("masalah_awal_5_why")
+  status              StatusRca      @default(DRAFT)
+  disusunOlehId       String         @map("disusun_oleh_id")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  report              Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  disusunOleh         User           @relation("RcaDisusunOleh", fields: [disusunOlehId], references: [id])
+
+  timelineEntries       RcaTimelineEntry[]
+  timePersonGridEntries RcaTimePersonGridEntry[]
+  fiveWhyEntries        RcaFiveWhy[]
+  fishboneEntries       RcaFishboneEntry[]
+  rencanaPerbaikanEntries RcaRencanaPerbaikan[]
+
+  @@index([reportId])
+  @@index([disusunOlehId])
+  @@map("root_cause_analyses")
+}
+
+model RcaTimelineEntry {
+  id                 String   @id @default(uuid())
+  rcaId              String   @map("rca_id")
+  waktu              String
+  kejadian           String   @db.Text
+  informasiTambahan  String?  @db.Text @map("informasi_tambahan")
+  goodPractice       String?  @db.Text @map("good_practice")
+  masalahPelayanan   String?  @db.Text @map("masalah_pelayanan")
+  urutan             Int
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_timeline_entries")
+}
+
+model RcaTimePersonGridEntry {
+  id         String   @id @default(uuid())
+  rcaId      String   @map("rca_id")
+  staf       String
+  waktu      String
+  deskripsi  String   @db.Text
+  urutan     Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_time_person_grid_entries")
+}
+
+model RcaFiveWhy {
+  id         String   @id @default(uuid())
+  rcaId      String   @map("rca_id")
+  urutan     Int
+  jawaban    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_five_whys")
+}
+
+model RcaFishboneEntry {
+  id         String           @id @default(uuid())
+  rcaId      String           @map("rca_id")
+  kategori   KategoriFishbone
+  penyebab   String           @db.Text
+  urutan     Int
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_fishbone_entries")
+}
+
+model RcaRencanaPerbaikan {
+  id                String                 @id @default(uuid())
+  rcaId             String                 @map("rca_id")
+  akarMasalah       String                 @db.Text @map("akar_masalah")
+  rekomendasiSolusi String                 @db.Text @map("rekomendasi_solusi")
+  tindakanPerbaikan String                 @db.Text @map("tindakan_perbaikan")
+  pelaksana         String
+  targetWaktu       String                 @map("target_waktu")
+  status            StatusRencanaPerbaikan @default(BELUM_MULAI)
+  urutan            Int
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_rencana_perbaikan")
 }
