@@ -4,6 +4,7 @@ import { TokenPayload } from '@/utils/token';
 import { rcaService } from './rca.service';
 import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
+import { exportRcaToExcel, exportRcaToPdf } from '@/modules/reports/export.service';
 
 const checkAuthorization = async (reportId: string, user: TokenPayload) => {
   if (user.role === 'ADMIN_UTAMA' || user.role === 'ADMIN') {
@@ -77,6 +78,39 @@ export const deleteRca = async (req: AuthRequest, res: Response, next: NextFunct
       message: 'RCA berhasil dihapus',
       data: null,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const exportRca = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    const format = req.query.format as string | undefined;
+
+    if (!format || (format !== 'excel' && format !== 'pdf')) {
+      throw new ApiError(400, "Parameter format harus 'excel' atau 'pdf'");
+    }
+
+    // Otorisasi sama seperti GET RCA: admin atau assignedTo
+    await checkAuthorization(reportId, req.user!);
+
+    if (format === 'excel') {
+      const buffer = await exportRcaToExcel(reportId);
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="rca-${reportId}.xlsx"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.status(200).send(buffer);
+    } else {
+      const buffer = await exportRcaToPdf(reportId);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="rca-${reportId}.pdf"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.status(200).send(buffer);
+    }
   } catch (error) {
     next(error);
   }

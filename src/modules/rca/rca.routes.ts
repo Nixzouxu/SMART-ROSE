@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createRca, getRca, updateRca, deleteRca } from './rca.controller';
+import { createRca, getRca, updateRca, deleteRca, exportRca } from './rca.controller';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
@@ -148,5 +148,48 @@ router.put('/:reportId/rca', authenticate, validate(createUpdateRcaSchema), upda
  *         description: Akses ditolak
  */
 router.delete('/:reportId/rca', authenticate, requireRole(['ADMIN_UTAMA']), deleteRca);
+
+/**
+ * @swagger
+ * /reports/{reportId}/rca/export:
+ *   get:
+ *     summary: Ekspor dokumen RCA ke Excel atau PDF
+ *     tags: [RCA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID laporan
+ *       - in: query
+ *         name: format
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [excel, pdf]
+ *         description: Format ekspor (excel atau pdf)
+ *     responses:
+ *       200:
+ *         description: File berhasil digenerate dan siap diunduh
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Format tidak valid (harus excel atau pdf)
+ *       403:
+ *         description: Akses ditolak
+ *       404:
+ *         description: Laporan atau RCA tidak ditemukan
+ */
+router.get('/:reportId/rca/export', authenticate, exportRca);
 
 export default router;
