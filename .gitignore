@@ -36,3 +36,6 @@ docker-compose.override.yml
 
 # Backup lokal (jangan ikut ter-commit)
 backups/
+
+# Temp files (ekspor test, debug sementara)
+tmp/

@@ -10,7 +10,9 @@ import authRoutes from '@/modules/auth/auth.routes';
 import adminRoutes from '@/modules/admin/admin.routes';
 import reportsRoutes from '@/modules/reports/reports.routes';
 import { guidesRouter, guidesAdminRouter } from '@/modules/education/guides.routes';
+import rcaRoutes from '@/modules/rca/rca.routes';
 import { chatbotRouter, chatbotAdminRouter } from '@/modules/chatbot/chatbot.routes';
+import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -31,12 +33,16 @@ export function createApp(): Application {
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/reports', reportsRoutes);
+  app.use('/api/reports', rcaRoutes);
 
   // Fase 5
   app.use('/api/guides', guidesRouter);
   app.use('/api/admin/guides', guidesAdminRouter);
   app.use('/api/chatbot', chatbotRouter);
   app.use('/api/admin/chatbot', chatbotAdminRouter);
+
+  // Fase 6B
+  app.use('/api/admin/dashboard', dashboardRoutes);
 
   app.use(errorHandler); // WAJIB paling akhir, setelah semua route
 
