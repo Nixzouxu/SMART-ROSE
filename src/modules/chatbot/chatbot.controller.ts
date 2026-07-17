@@ -19,6 +19,26 @@ export const askChatbotHandler = async (req: Request, res: Response, next: NextF
   }
 };
 
+/**
+ * Handler untuk endpoint chatbot publik (tanpa login).
+ * userId dikirim sebagai null, sehingga log chatbot tidak terikat ke akun manapun.
+ */
+export const askChatbotPublicHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { pertanyaan } = req.body;
+
+    const result = await chatbotService.askChatbot(null, pertanyaan);
+
+    res.status(200).json({
+      success: true,
+      message: 'Berhasil memproses pertanyaan chatbot',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPendingChatbotLogsHandler = async (
   req: Request,
   res: Response,

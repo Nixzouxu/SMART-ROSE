@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { db } from '@/config/db';
 import { generateTrackingNumber } from './trackingNumber.util';
 import { ApiError } from '@/utils/apiError';
@@ -31,7 +32,7 @@ type CreateReportInput = {
   status?: 'DRAFT' | 'SUBMITTED';
 };
 
-export const createReport = async (pelaporId: string, data: CreateReportInput) => {
+export const createReport = async (pelaporId: string | null, data: CreateReportInput) => {
   const { status, ...rest } = data;
   let trackingNumber: string | null = null;
   const finalStatus = status || 'DRAFT';
@@ -40,14 +41,14 @@ export const createReport = async (pelaporId: string, data: CreateReportInput) =
     trackingNumber = await generateTrackingNumber();
   }
 
-  const report = await db.report.create({
-    data: {
-      ...rest,
-      status: finalStatus,
-      pelaporId,
-      trackingNumber,
-    },
-  });
+  const reportData: Prisma.ReportUncheckedCreateInput = {
+    ...rest,
+    status: finalStatus,
+    pelaporId: pelaporId ?? null,
+    trackingNumber,
+  };
+
+  const report = await db.report.create({ data: reportData });
 
   return maskAnonimReport(report);
 };

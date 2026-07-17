@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import { db } from '@/config/db';
 import redis from '@/config/redis';
 import { matchQuestion } from './chatbot.matcher';
@@ -11,22 +12,21 @@ const generateHash = (text: string) => {
   return crypto.createHash('sha256').update(text).digest('hex');
 };
 
-export const askChatbot = async (userId: string, pertanyaan: string) => {
+export const askChatbot = async (userId: string | null, pertanyaan: string) => {
   const query = pertanyaan.toLowerCase().trim();
   const cacheKey = `chatbot:${generateHash(query)}`;
 
   // 1. Cek cache Redis
   const cachedJawaban = await redis.get(cacheKey);
   if (cachedJawaban) {
-    // Simpan log dari cache
-    const log = await db.chatbotLog.create({
-      data: {
-        userId,
-        pertanyaan: query,
-        jawaban: cachedJawaban,
-        statusEskalasi: 'TERJAWAB_OTOMATIS',
-      },
-    });
+    // Simpan log dari cache (userId null untuk pelapor publik)
+    const logData: Prisma.ChatbotLogUncheckedCreateInput = {
+      userId: userId ?? null,
+      pertanyaan: query,
+      jawaban: cachedJawaban,
+      statusEskalasi: 'TERJAWAB_OTOMATIS',
+    };
+    const log = await db.chatbotLog.create({ data: logData });
     return {
       logId: log.id,
       jawaban: cachedJawaban,
@@ -42,14 +42,13 @@ export const askChatbot = async (userId: string, pertanyaan: string) => {
     await redis.setex(cacheKey, CACHE_TTL, match.jawaban);
 
     // Simpan log
-    const log = await db.chatbotLog.create({
-      data: {
-        userId,
-        pertanyaan: query,
-        jawaban: match.jawaban,
-        statusEskalasi: 'TERJAWAB_OTOMATIS',
-      },
-    });
+    const logData: Prisma.ChatbotLogUncheckedCreateInput = {
+      userId: userId ?? null,
+      pertanyaan: query,
+      jawaban: match.jawaban,
+      statusEskalasi: 'TERJAWAB_OTOMATIS',
+    };
+    const log = await db.chatbotLog.create({ data: logData });
 
     return {
       logId: log.id,
@@ -60,14 +59,13 @@ export const askChatbot = async (userId: string, pertanyaan: string) => {
   }
 
   // 3. Jika tidak ketemu, eskalasi ke Admin
-  const log = await db.chatbotLog.create({
-    data: {
-      userId,
-      pertanyaan: query,
-      jawaban: null,
-      statusEskalasi: 'MENUNGGU_ADMIN',
-    },
-  });
+  const logData: Prisma.ChatbotLogUncheckedCreateInput = {
+    userId: userId ?? null,
+    pertanyaan: query,
+    jawaban: null,
+    statusEskalasi: 'MENUNGGU_ADMIN',
+  };
+  const log = await db.chatbotLog.create({ data: logData });
 
   // Notifikasi ke semua ADMIN dan ADMIN_UTAMA
   const admins = await db.user.findMany({
@@ -132,12 +130,14 @@ export const answerChatbotLog = async (logId: string, adminId: string, jawaban: 
     },
   });
 
-  // Notifikasi ke user bahwa pertanyaannya telah dijawab
-  await createNotification(
-    updatedLog.userId,
-    'CHATBOT_DIJAWAB',
-    `Pertanyaan Anda telah dijawab oleh Admin.`,
-  );
+  // Notifikasi ke user hanya jika ada userId (pelapor publik anonim tidak punya akun)
+  if (updatedLog.userId) {
+    await createNotification(
+      updatedLog.userId,
+      'CHATBOT_DIJAWAB',
+      `Pertanyaan Anda telah dijawab oleh Admin.`,
+    );
+  }
 
   return updatedLog;
 };

@@ -17,6 +17,27 @@ export const createReportSchema = z.object({
   }),
 });
 
+/**
+ * Schema untuk pelaporan publik tanpa login.
+ * Laporan publik selalu SUBMITTED (tidak bisa draft), selalu anonim, dan wajib captcha.
+ */
+export const createReportPublicSchema = z.object({
+  body: z.object({
+    jenisInsiden: z.enum(['KTD', 'KNC', 'KTC', 'KPC', 'SENTINEL']),
+    tanggalKejadian: z.coerce.date(),
+    lokasi: z.string().min(1, 'Lokasi wajib diisi'),
+    unitKerja: z.string().min(1, 'Unit kerja wajib diisi'),
+    kronologi: z
+      .string()
+      .min(10, 'Kronologi minimal 10 karakter')
+      .max(5000, 'Kronologi maksimal 5000 karakter'),
+    dampak: z.string().min(1, 'Dampak wajib diisi'),
+    gradingAwal: z.enum(['HIJAU', 'BIRU', 'KUNING', 'MERAH']),
+    captchaToken: z.string().uuid('captchaToken harus berupa UUID yang valid'),
+    captchaJawaban: z.string().min(1, 'Jawaban captcha wajib diisi'),
+  }),
+});
+
 export const updateReportSchema = z.object({
   body: z.object({
     jenisInsiden: z.enum(['KTD', 'KNC', 'KTC', 'KPC', 'SENTINEL']).optional(),
