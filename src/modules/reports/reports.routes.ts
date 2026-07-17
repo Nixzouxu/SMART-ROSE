@@ -8,9 +8,10 @@ import {
   updateReportSchema,
   listReportsQuerySchema,
 } from './reports.schema';
-import { uploadMiddleware } from '@/middlewares/upload.middleware';
+import { uploadMiddleware, uploadRcaMiddleware } from '@/middlewares/upload.middleware';
 import * as attachmentController from './attachment.controller';
 import { publicRateLimit } from '@/middlewares/publicRateLimit.middleware';
+import { requireRole } from '@/middlewares/rbac.middleware';
 
 const router = Router();
 
@@ -276,5 +277,43 @@ router.put(
  *         description: Deleted
  */
 router.delete('/me/:id', authenticate, reportsController.deleteDraftReport);
+
+/**
+ * @openapi
+ * /reports/{id}/rca/attachments:
+ *   post:
+ *     summary: Upload lampiran RCA ke laporan
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Lampiran RCA berhasil diunggah
+ */
+router.post(
+  '/:id/rca/attachments',
+  authenticate,
+  requireRole(['ADMIN', 'ADMIN_UTAMA']),
+  uploadRcaMiddleware.single('file'),
+  attachmentController.uploadRcaAttachment,
+);
 
 export default router;

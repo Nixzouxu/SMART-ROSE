@@ -11,7 +11,7 @@ import rateLimit from 'express-rate-limit';
  */
 export const publicRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 menit
-  max: 5,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

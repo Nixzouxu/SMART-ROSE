@@ -6,10 +6,15 @@ import PDFDocument from 'pdfkit';
 import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
 
+interface RcaData {
+  report: Report;
+  rca: import('@prisma/client').RootCauseAnalysis;
+}
+
 /**
  * Ambil data RCA lengkap beserta report-nya dari database.
  */
-const fetchRcaData = async (reportId: string) => {
+const fetchRcaData = async (reportId: string): Promise<RcaData> => {
   const report = await prisma.report.findUnique({
     where: { id: reportId },
     include: {
@@ -493,6 +498,194 @@ export const exportRcaToPdf = async (reportId: string): Promise<Buffer> => {
         doc.page.height - 30,
         { align: 'center', width: pageWidth },
       );
+
+    doc.end();
+  });
+};
+
+export const generateMassReportExcel = async (reports: Report[]): Promise<Buffer> => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Daftar Laporan');
+  sheet.columns = [
+    { header: 'Tracking Number', key: 'tracking', width: 20 },
+    { header: 'Jenis Insiden', key: 'jenis', width: 20 },
+    { header: 'Tanggal Kejadian', key: 'tanggal', width: 20 },
+    { header: 'Unit Kerja', key: 'unit', width: 30 },
+    { header: 'Grading', key: 'grading', width: 15 },
+    { header: 'Status', key: 'status', width: 20 },
+  ];
+
+  const headerRow = sheet.getRow(1);
+  applyRowStyle(headerRow, HEADER_STYLE);
+
+  reports.forEach((r) => {
+    sheet.addRow({
+      tracking: r.trackingNumber ?? '-',
+      jenis: r.jenisInsiden,
+      tanggal: new Date(r.tanggalKejadian).toLocaleDateString('id-ID'),
+      unit: r.unitKerja,
+      grading: r.gradingFinal ?? r.gradingAwal,
+      status: r.status,
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+};
+
+export const generateMassReportPdf = async (reports: Report[]): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.font('Helvetica-Bold').fontSize(16).text('Daftar Laporan Insiden', { align: 'center' });
+    doc.moveDown(1);
+
+    const colWidths = [120, 100, 100, 200, 80, 100];
+    const headers = [
+      'Tracking Number',
+      'Jenis Insiden',
+      'Tanggal',
+      'Unit Kerja',
+      'Grading',
+      'Status',
+    ];
+    let startX = 40;
+    let startY = doc.y;
+
+    headers.forEach((h, i) => {
+      doc.rect(startX, startY, colWidths[i], 20).fill('#1F4E79');
+      doc
+        .fillColor('#FFFFFF')
+        .fontSize(10)
+        .text(h, startX + 5, startY + 5, { width: colWidths[i] - 10 });
+      startX += colWidths[i];
+    });
+
+    doc.y = startY + 20;
+    doc.fillColor('#000000').font('Helvetica').fontSize(9);
+
+    reports.forEach((r) => {
+      if (doc.y > doc.page.height - 60) {
+        doc.addPage({ layout: 'landscape' });
+        doc.y = 40;
+      }
+      startX = 40;
+      startY = doc.y;
+      const row = [
+        r.trackingNumber ?? '-',
+        r.jenisInsiden,
+        new Date(r.tanggalKejadian).toLocaleDateString('id-ID'),
+        r.unitKerja,
+        r.gradingFinal ?? r.gradingAwal,
+        r.status,
+      ];
+
+      row.forEach((text, i) => {
+        doc.rect(startX, startY, colWidths[i], 20).stroke('#CCCCCC');
+        doc.text(text, startX + 5, startY + 5, { width: colWidths[i] - 10 });
+        startX += colWidths[i];
+      });
+      doc.y = startY + 20;
+    });
+
+    doc.end();
+  });
+};
+
+export const generateDashboardExcel = async (
+  data: DashboardData,
+  cakupan: string[],
+): Promise<Buffer> => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Dashboard Export');
+
+  if (cakupan.includes('ringkasanStatistik') && data.ringkasanStatistik) {
+    sheet.addRow(['Ringkasan Statistik']).font = { bold: true };
+    sheet.addRow(['Total Laporan', data.ringkasanStatistik.totalLaporan]);
+    sheet.addRow(['Laporan Selesai', data.ringkasanStatistik.totalSelesai]);
+    sheet.addRow(['Laporan Overdue', data.ringkasanStatistik.totalOverdue]);
+    sheet.addRow([]);
+  }
+
+  if (cakupan.includes('grafikJenisInsiden') && data.grafikJenisInsiden) {
+    sheet.addRow(['Grafik Jenis Insiden']).font = { bold: true };
+    data.grafikJenisInsiden.forEach((item) => {
+      sheet.addRow([item.jenisInsiden, item._count]);
+    });
+    sheet.addRow([]);
+  }
+
+  if (cakupan.includes('grafikGrading') && data.grafikGrading) {
+    sheet.addRow(['Grafik Grading']).font = { bold: true };
+    data.grafikGrading.forEach((item) => {
+      sheet.addRow([item.gradingFinal || item.gradingAwal, item._count]);
+    });
+    sheet.addRow([]);
+  }
+
+  if (cakupan.includes('trenBulanan') && data.trenBulanan) {
+    sheet.addRow(['Tren Bulanan']).font = { bold: true };
+    data.trenBulanan.forEach((item) => {
+      sheet.addRow([item.bulan, item.jumlah]);
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+};
+
+export const generateDashboardPdf = async (
+  data: DashboardData,
+  cakupan: string[],
+): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const chunks: Buffer[] = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.font('Helvetica-Bold').fontSize(16).text('Dashboard Export', { align: 'center' });
+    doc.moveDown(2);
+
+    if (cakupan.includes('ringkasanStatistik') && data.ringkasanStatistik) {
+      doc.font('Helvetica-Bold').fontSize(12).text('Ringkasan Statistik');
+      doc.font('Helvetica').fontSize(10);
+      doc.text(`Total Laporan: ${data.ringkasanStatistik.totalLaporan}`);
+      doc.text(`Laporan Selesai: ${data.ringkasanStatistik.totalSelesai}`);
+      doc.text(`Laporan Overdue: ${data.ringkasanStatistik.totalOverdue}`);
+      doc.moveDown(1.5);
+    }
+
+    if (cakupan.includes('grafikJenisInsiden') && data.grafikJenisInsiden) {
+      doc.font('Helvetica-Bold').fontSize(12).text('Grafik Jenis Insiden');
+      doc.font('Helvetica').fontSize(10);
+      data.grafikJenisInsiden.forEach((item) => {
+        doc.text(`${item.jenisInsiden}: ${item._count}`);
+      });
+      doc.moveDown(1.5);
+    }
+
+    if (cakupan.includes('grafikGrading') && data.grafikGrading) {
+      doc.font('Helvetica-Bold').fontSize(12).text('Grafik Grading');
+      doc.font('Helvetica').fontSize(10);
+      data.grafikGrading.forEach((item) => {
+        doc.text(`${item.gradingFinal || item.gradingAwal}: ${item._count}`);
+      });
+      doc.moveDown(1.5);
+    }
+
+    if (cakupan.includes('trenBulanan') && data.trenBulanan) {
+      doc.font('Helvetica-Bold').fontSize(12).text('Tren Bulanan');
+      doc.font('Helvetica').fontSize(10);
+      data.trenBulanan.forEach((item) => {
+        doc.text(`${item.bulan}: ${item.jumlah}`);
+      });
+    }
 
     doc.end();
   });

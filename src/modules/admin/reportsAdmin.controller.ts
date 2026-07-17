@@ -3,8 +3,9 @@ import { AuthRequest } from '@/middlewares/auth.middleware';
 import { db } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
 import { generateTrackingNumber } from '@/modules/reports/trackingNumber.util';
-import { Prisma } from '@prisma/client';
+import { Prisma, StatusLaporan, JenisInsiden } from '@prisma/client';
 import { regradeReport } from './regrade.service';
+import { generateMassReportExcel, generateMassReportPdf } from '@/modules/reports/export.service';
 
 export const listReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -136,6 +137,10 @@ export const updateReport = async (req: AuthRequest, res: Response, next: NextFu
     const existingReport = await db.report.findUnique({ where: { id } });
     if (!existingReport) {
       throw new ApiError(404, 'Laporan tidak ditemukan');
+    }
+
+    if (existingReport.status === 'SELESAI') {
+      throw new ApiError(409, 'Laporan sudah selesai dan terkunci, tidak dapat diubah lagi');
     }
 
     let trackingNumber = existingReport.trackingNumber;
@@ -287,6 +292,15 @@ export const regradeReportHandler = async (req: AuthRequest, res: Response, next
     const reportId = req.params.id as string;
     const { gradingBaru, alasan } = req.body as { gradingBaru: string; alasan: string };
 
+    const existingReport = await db.report.findUnique({ where: { id: reportId } });
+    if (!existingReport) {
+      throw new ApiError(404, 'Laporan tidak ditemukan');
+    }
+
+    if (existingReport.status === 'SELESAI') {
+      throw new ApiError(409, 'Laporan sudah selesai dan terkunci, tidak dapat diubah lagi');
+    }
+
     const result = await regradeReport(adminId, reportId, gradingBaru, alasan);
 
     res.status(200).json({
@@ -294,6 +308,46 @@ export const regradeReportHandler = async (req: AuthRequest, res: Response, next
       message: 'Grading laporan berhasil diubah',
       data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const exportReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { format, status, jenisInsiden, unitKerja, startDate, endDate } = req.query;
+
+    const where: Prisma.ReportWhereInput = {};
+    if (status) where.status = status as StatusLaporan;
+    if (jenisInsiden) where.jenisInsiden = jenisInsiden as JenisInsiden;
+    if (unitKerja) where.unitKerja = unitKerja as string;
+    if (startDate || endDate) {
+      where.tanggalKejadian = {};
+      if (startDate) where.tanggalKejadian.gte = new Date(startDate as string);
+      if (endDate) where.tanggalKejadian.lte = new Date(endDate as string);
+    }
+
+    const reports = await db.report.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (format === 'excel') {
+      const buffer = await generateMassReportExcel(reports);
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader('Content-Disposition', 'attachment; filename="export-laporan.xlsx"');
+      return res.send(buffer);
+    } else if (format === 'pdf') {
+      const buffer = await generateMassReportPdf(reports);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="export-laporan.pdf"');
+      return res.send(buffer);
+    } else {
+      throw new ApiError(400, 'Format tidak valid. Gunakan excel atau pdf');
+    }
   } catch (error) {
     next(error);
   }

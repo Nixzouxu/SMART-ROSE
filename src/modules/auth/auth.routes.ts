@@ -298,4 +298,33 @@ router.put('/profile', authenticate, profileController.updateMe);
  */
 router.put('/profile/password', authenticate, profileController.changePassword);
 
+/**
+ * @openapi
+ * /auth/profile:
+ *   delete:
+ *     summary: Delete user profile (soft delete)
+ *     tags: [Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile deleted successfully
+ *       400:
+ *         description: Incorrect password
+ *       401:
+ *         description: Unauthorized
+ */
+router.delete('/profile', authenticate, profileController.deleteProfile);
+
 export default router;
