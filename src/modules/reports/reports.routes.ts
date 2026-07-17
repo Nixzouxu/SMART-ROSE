@@ -3,9 +3,14 @@ import * as reportsController from './reports.controller';
 import * as qrcodeController from './qrcode.controller';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
-import { createReportSchema, updateReportSchema, listReportsQuerySchema } from './reports.schema';
+import {
+  createReportPublicSchema,
+  updateReportSchema,
+  listReportsQuerySchema,
+} from './reports.schema';
 import { uploadMiddleware } from '@/middlewares/upload.middleware';
 import * as attachmentController from './attachment.controller';
+import { publicRateLimit } from '@/middlewares/publicRateLimit.middleware';
 
 const router = Router();
 
@@ -16,7 +21,7 @@ const router = Router();
  *   description: API untuk pelaporan insiden
  */
 
-// Route Publik
+// ===== Route Publik =====
 /**
  * @openapi
  * /reports/scan/{unitCode}:
@@ -36,6 +41,7 @@ const router = Router();
  *         description: Not found
  */
 router.get('/scan/:unitCode', qrcodeController.scan);
+
 /**
  * @openapi
  * /reports/scan/{unitCode}/image:
@@ -55,6 +61,7 @@ router.get('/scan/:unitCode', qrcodeController.scan);
  *         description: Not found
  */
 router.get('/scan/:unitCode/image', qrcodeController.getUnitQrImage);
+
 /**
  * @openapi
  * /reports/track/{trackingNumber}:
@@ -75,27 +82,121 @@ router.get('/scan/:unitCode/image', qrcodeController.getUnitQrImage);
  */
 router.get('/track/:trackingNumber', reportsController.trackReport);
 
-// Route User (Authenticate)
-
 /**
  * @openapi
  * /reports:
  *   post:
- *     summary: Create new incident report
+ *     summary: Buat laporan insiden baru (publik, tanpa login)
+ *     description: >
+ *       Endpoint publik untuk pelaporan insiden tanpa perlu akun. Laporan otomatis berstatus
+ *       SUBMITTED dan bersifat anonim. Wajib menyertakan captchaToken dan captchaJawaban
+ *       yang diperoleh dari GET /captcha.
  *     tags: [Reports]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - jenisInsiden
+ *               - tanggalKejadian
+ *               - lokasi
+ *               - unitKerja
+ *               - kronologi
+ *               - dampak
+ *               - gradingAwal
+ *               - captchaToken
+ *               - captchaJawaban
+ *             properties:
+ *               jenisInsiden:
+ *                 type: string
+ *                 enum: [KTD, KNC, KTC, KPC, SENTINEL]
+ *               tanggalKejadian:
+ *                 type: string
+ *                 format: date-time
+ *               lokasi:
+ *                 type: string
+ *               unitKerja:
+ *                 type: string
+ *               kronologi:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 5000
+ *               dampak:
+ *                 type: string
+ *               gradingAwal:
+ *                 type: string
+ *                 enum: [HIJAU, BIRU, KUNING, MERAH]
+ *               captchaToken:
+ *                 type: string
+ *                 description: Token UUID dari GET /captcha
+ *               captchaJawaban:
+ *                 type: string
+ *                 description: Jawaban soal matematika dari GET /captcha
  *     responses:
  *       201:
- *         description: Created
+ *         description: Laporan berhasil dibuat, mengembalikan trackingNumber
+ *       400:
+ *         description: Validasi gagal atau captcha salah
+ *       429:
+ *         description: Terlalu banyak permintaan
  */
-router.post('/', authenticate, validate(createReportSchema), reportsController.createReport);
+router.post(
+  '/',
+  publicRateLimit,
+  validate(createReportPublicSchema),
+  reportsController.createReportPublic,
+);
+
+/**
+ * @openapi
+ * /reports/{id}/attachments:
+ *   post:
+ *     summary: Upload lampiran ke laporan (publik, tanpa login)
+ *     description: >
+ *       Endpoint publik untuk mengunggah lampiran bukti ke laporan yang baru dibuat.
+ *       Pelapor anonim dapat langsung melampirkan foto bukti dari lokasi kejadian.
+ *       Hanya menerima file jpg, png, atau pdf dengan ukuran maksimal 5MB.
+ *     tags: [Reports]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID laporan yang baru dibuat
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: File lampiran (jpg/png/pdf, maks 5MB)
+ *     responses:
+ *       201:
+ *         description: Lampiran berhasil diunggah
+ *       400:
+ *         description: File tidak ada, tipe tidak diizinkan, atau ukuran melebihi batas
+ *       404:
+ *         description: Laporan tidak ditemukan
+ *       429:
+ *         description: Terlalu banyak permintaan
+ */
+router.post(
+  '/:id/attachments',
+  publicRateLimit,
+  uploadMiddleware.single('file'),
+  attachmentController.uploadAttachment,
+);
+
+// ===== Route User (Authenticate) =====
 
 /**
  * @openapi
@@ -175,40 +276,5 @@ router.put(
  *         description: Deleted
  */
 router.delete('/me/:id', authenticate, reportsController.deleteDraftReport);
-
-/**
- * @openapi
- * /reports/{id}/attachments:
- *   post:
- *     summary: Upload attachment to report
- *     tags: [Reports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               file:
- *                 type: string
- *                 format: binary
- *     responses:
- *       201:
- *         description: Uploaded
- */
-router.post(
-  '/:id/attachments',
-  authenticate,
-  uploadMiddleware.single('file'),
-  attachmentController.uploadAttachment,
-);
 
 export default router;

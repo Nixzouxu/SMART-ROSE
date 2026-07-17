@@ -1,6 +1,7 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '@/middlewares/auth.middleware';
 import * as reportsService from './reports.service';
+import * as captchaService from '@/modules/captcha/captcha.service';
 
 export const createReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -10,6 +11,34 @@ export const createReport = async (req: AuthRequest, res: Response, next: NextFu
     res.status(201).json({
       success: true,
       message: 'Laporan berhasil dibuat',
+      data: report,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /reports - Endpoint publik tanpa login.
+ * Verifikasi captcha, lalu buat laporan anonim + SUBMITTED dengan pelaporId=null.
+ */
+export const createReportPublic = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { captchaToken, captchaJawaban, ...reportData } = req.body;
+
+    // Validasi captcha (single-use, token dihapus setelah validasi)
+    await captchaService.verifyCaptcha(captchaToken, captchaJawaban);
+
+    const report = await reportsService.createReport(null, {
+      ...reportData,
+      isAnonim: true, // Laporan publik selalu anonim
+      status: 'SUBMITTED', // Laporan publik selalu langsung SUBMITTED
+    });
+
+    res.status(201).json({
+      success: true,
+      message:
+        'Laporan berhasil dibuat. Simpan nomor pelacakan ini untuk memantau status laporan Anda.',
       data: report,
     });
   } catch (error) {

@@ -12,10 +12,15 @@ import reportsRoutes from '@/modules/reports/reports.routes';
 import { guidesRouter, guidesAdminRouter } from '@/modules/education/guides.routes';
 import rcaRoutes from '@/modules/rca/rca.routes';
 import { chatbotRouter, chatbotAdminRouter } from '@/modules/chatbot/chatbot.routes';
+import chatbotPublicRouter from '@/modules/chatbot/chatbot.public.routes';
 import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
+import captchaRoutes from '@/modules/captcha/captcha.routes';
 
 export function createApp(): Application {
   const app = express();
+
+  // Trust proxy agar rate-limiter dan requestLogger dapat membaca IP asli (via X-Forwarded-For)
+  app.set('trust proxy', 1);
 
   app.use(helmet());
   app.use(cors());
@@ -38,11 +43,16 @@ export function createApp(): Application {
   // Fase 5
   app.use('/api/guides', guidesRouter);
   app.use('/api/admin/guides', guidesAdminRouter);
+  // Chatbot publik di-mount SEBELUM chatbotRouter (yang pakai authenticate global)
+  app.use('/api/chatbot/public', chatbotPublicRouter);
   app.use('/api/chatbot', chatbotRouter);
   app.use('/api/admin/chatbot', chatbotAdminRouter);
 
   // Fase 6B
   app.use('/api/admin/dashboard', dashboardRoutes);
+
+  // Revisi Pelaporan Publik
+  app.use('/api/captcha', captchaRoutes);
 
   app.use(errorHandler); // WAJIB paling akhir, setelah semua route
 

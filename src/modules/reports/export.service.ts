@@ -116,7 +116,7 @@ export const exportRcaToExcel = async (reportId: string): Promise<Buffer> => {
     ['Grading Awal', report.gradingAwal],
     ['Grading Final', report.gradingFinal ?? '-'],
     ['Status Laporan', report.status],
-    ['Pelapor', report.isAnonim ? 'Anonim' : report.pelapor.nama],
+    ['Pelapor', report.isAnonim ? 'Anonim' : (report.pelapor?.nama ?? '-')],
     ['Assigned To', report.assignedTo?.nama ?? '-'],
     ['Kronologi', report.kronologi],
     ['Dampak', report.dampak],
@@ -364,7 +364,7 @@ export const exportRcaToPdf = async (reportId: string): Promise<Buffer> => {
     labelValue('Grading Awal', report.gradingAwal);
     labelValue('Grading Final', report.gradingFinal ?? '-');
     labelValue('Status Laporan', report.status);
-    labelValue('Pelapor', report.isAnonim ? 'Anonim' : report.pelapor.nama);
+    labelValue('Pelapor', report.isAnonim ? 'Anonim' : (report.pelapor?.nama ?? '-'));
     labelValue('Assigned To', report.assignedTo?.nama ?? '-');
     doc.moveDown(0.3);
     doc.font('Helvetica-Bold').fontSize(9).text('Kronologi:', { continued: false });

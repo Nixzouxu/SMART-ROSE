@@ -144,12 +144,12 @@ model Report {
   catatanInvestigasi  String?        @db.Text @map("catatan_investigasi")
   deadlineInvestigasi DateTime?      @map("deadline_investigasi")
   assignedToId        String?        @map("assigned_to_id")
-  pelaporId           String         @map("pelapor_id")
+  pelaporId           String?        @map("pelapor_id")
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
   deletedAt           DateTime?      @map("deleted_at")
 
-  pelapor             User               @relation("Pelapor", fields: [pelaporId], references: [id])
+  pelapor             User?              @relation("Pelapor", fields: [pelaporId], references: [id])
   assignedTo          User?              @relation("AssignedAdmin", fields: [assignedToId], references: [id])
   attachments         ReportAttachment[]
   histories           ReportHistory[]
@@ -219,14 +219,14 @@ model ChatbotKnowledge {
 
 model ChatbotLog {
   id             String                @id @default(uuid())
-  userId         String                @map("user_id")
+  userId         String?               @map("user_id")
   pertanyaan     String
   jawaban        String?               @db.Text
   statusEskalasi StatusEskalasiChatbot @default(TERJAWAB_OTOMATIS) @map("status_eskalasi")
   createdAt      DateTime              @default(now()) @map("created_at")
   updatedAt      DateTime              @updatedAt @map("updated_at")
 
-  user           User                  @relation(fields: [userId], references: [id])
+  user           User?                 @relation(fields: [userId], references: [id])
 
   @@index([statusEskalasi])
   @@map("chatbot_logs")
