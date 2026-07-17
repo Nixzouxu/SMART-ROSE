@@ -21,3 +21,23 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
     next(error);
   }
 };
+
+export const uploadRcaAttachment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.id as string;
+
+    if (!req.file) {
+      throw new ApiError(400, 'File lampiran tidak ditemukan dalam request');
+    }
+
+    const attachment = await attachmentService.uploadRcaAttachment(reportId, req.file);
+
+    res.status(201).json({
+      success: true,
+      message: 'Lampiran RCA berhasil diunggah',
+      data: attachment,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

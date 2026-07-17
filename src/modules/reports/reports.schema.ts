@@ -35,6 +35,22 @@ export const createReportPublicSchema = z.object({
     gradingAwal: z.enum(['HIJAU', 'BIRU', 'KUNING', 'MERAH']),
     captchaToken: z.string().uuid('captchaToken harus berupa UUID yang valid'),
     captchaJawaban: z.string().min(1, 'Jawaban captcha wajib diisi'),
+    melibatkanPasien: z.boolean().default(true),
+    namaPasien: z.string().optional(),
+    noRekamMedis: z.string().optional(),
+    ruanganPasien: z.string().optional(),
+    umurPasien: z.coerce.number().optional(),
+    jenisKelaminPasien: z.string().optional(),
+    statusPasienSaatInsiden: z.enum(['RAWAT_INAP', 'RAWAT_JALAN', 'IGD', 'LAIN_LAIN']).optional(),
+    penanggungBiaya: z.string().optional(),
+    tanggalJamMasukRs: z.coerce.date().optional(),
+    kategoriPelaporPertama: z.enum(['PASIEN_SENDIRI', 'KELUARGA', 'STAF', 'LAIN_LAIN']).optional(),
+    pihakTerlibat: z.array(z.string()).optional(),
+    kasusSpesialisasi: z.string().optional(),
+    akibatTerhadapPasien: z
+      .enum(['SANGAT_RINGAN', 'RINGAN', 'SEDANG', 'BERAT', 'SANGAT_BERAT'])
+      .optional(),
+    apakahKejadianSerupaPernahTerjadi: z.boolean().optional(),
   }),
 });
 

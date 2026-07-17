@@ -14,6 +14,7 @@ import {
   getByGradingRisiko,
   getByUnitKerja,
   getTrend,
+  exportDashboard,
 } from './dashboard.controller';
 
 const router = Router();
@@ -245,5 +246,40 @@ router.get(
   cacheMiddleware({ keyPrefix: 'dashboard:trend', ttl: 300 }),
   getTrend,
 );
+
+/**
+ * @swagger
+ * /admin/dashboard/export:
+ *   post:
+ *     summary: Ekspor dashboard ke PDF atau Excel
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - format
+ *               - cakupan
+ *             properties:
+ *               format:
+ *                 type: string
+ *                 enum: [excel, pdf]
+ *               cakupan:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: File hasil ekspor
+ *       400:
+ *         description: Format atau parameter tidak valid
+ *       403:
+ *         description: Akses ditolak
+ */
+router.post('/export', ...adminOnly, exportDashboard);
 
 export default router;

@@ -101,6 +101,34 @@ enum StatusRencanaPerbaikan {
   SELESAI
 }
 
+enum StatusPasienSaatInsiden {
+  RAWAT_INAP
+  RAWAT_JALAN
+  IGD
+  LAIN_LAIN
+}
+
+enum KategoriPelapor {
+  PASIEN_SENDIRI
+  KELUARGA
+  STAF
+  LAIN_LAIN
+}
+
+enum AkibatPasien {
+  SANGAT_RINGAN
+  RINGAN
+  SEDANG
+  BERAT
+  SANGAT_BERAT
+}
+
+enum TipeFileRca {
+  PDF
+  DOCX
+  XLSX
+}
+
 model User {
   id               String           @id @default(uuid())
   nama             String
@@ -141,6 +169,21 @@ model Report {
   gradingFinal        GradingRisiko? @map("grading_final")
   status              StatusLaporan  @default(DRAFT)
   isAnonim            Boolean        @default(false) @map("is_anonim")
+  melibatkanPasien                Boolean                  @default(true) @map("melibatkan_pasien")
+  namaPasien                      String?                  @map("nama_pasien")
+  noRekamMedis                    String?                  @map("no_rekam_medis")
+  ruanganPasien                   String?                  @map("ruangan_pasien")
+  umurPasien                      Int?                     @map("umur_pasien")
+  jenisKelaminPasien              String?                  @map("jenis_kelamin_pasien")
+  statusPasienSaatInsiden         StatusPasienSaatInsiden? @map("status_pasien_saat_insiden")
+  penanggungBiaya                 String?                  @map("penanggung_biaya")
+  tanggalJamMasukRs               DateTime?                @map("tanggal_jam_masuk_rs")
+  kategoriPelaporPertama          KategoriPelapor?         @map("kategori_pelapor_pertama")
+  pihakTerlibat                   String[]                 @default([]) @map("pihak_terlibat")
+  kasusSpesialisasi               String?                  @map("kasus_spesialisasi")
+  akibatTerhadapPasien            AkibatPasien?            @map("akibat_terhadap_pasien")
+  apakahKejadianSerupaPernahTerjadi Boolean?               @map("apakah_kejadian_serupa_pernah_terjadi")
+
   catatanInvestigasi  String?        @db.Text @map("catatan_investigasi")
   deadlineInvestigasi DateTime?      @map("deadline_investigasi")
   assignedToId        String?        @map("assigned_to_id")
@@ -286,6 +329,7 @@ model RootCauseAnalysis {
   fiveWhyEntries        RcaFiveWhy[]
   fishboneEntries       RcaFishboneEntry[]
   rencanaPerbaikanEntries RcaRencanaPerbaikan[]
+  attachments           RcaAttachment[]
 
   @@index([reportId])
   @@index([disusunOlehId])
@@ -372,4 +416,18 @@ model RcaRencanaPerbaikan {
 
   @@index([rcaId])
   @@map("rca_rencana_perbaikan")
+}
+
+model RcaAttachment {
+  id         String      @id @default(uuid())
+  rcaId      String      @map("rca_id")
+  fileUrl    String      @map("file_url")
+  objectPath String      @map("object_path")
+  tipeFile   TipeFileRca @map("tipe_file")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  rca        RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_attachments")
 }

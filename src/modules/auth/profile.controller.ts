@@ -98,3 +98,40 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     next(error);
   }
 };
+
+export const deleteProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const { password } = req.body;
+
+    if (!password) {
+      throw new ApiError(400, 'Password dibutuhkan untuk konfirmasi');
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new ApiError(404, 'User tidak ditemukan');
+    }
+
+    const isValidPassword = await comparePassword(password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new ApiError(400, 'Password salah, konfirmasi penghapusan gagal');
+    }
+
+    await db.user.update({
+      where: { id: userId },
+      data: { deletedAt: new Date() },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Akun berhasil dihapus',
+      data: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -37,3 +37,36 @@ export const uploadAttachment = async (reportId: string, file: Express.Multer.Fi
 
   return attachment;
 };
+
+export const uploadRcaAttachment = async (reportId: string, file: Express.Multer.File) => {
+  const rca = await db.rootCauseAnalysis.findUnique({
+    where: { reportId: reportId },
+  });
+
+  if (!rca) {
+    throw new ApiError(404, 'RCA tidak ditemukan untuk laporan ini');
+  }
+
+  const ext = path.extname(file.originalname);
+  const objectPath = `rca/${rca.id}/${randomUUID()}${ext}`;
+
+  const storageProvider = getStorageProvider();
+  const result = await storageProvider.upload(objectPath, file.buffer, file.mimetype);
+
+  let tipeFile: 'PDF' | 'DOCX' | 'XLSX' = 'PDF';
+  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    tipeFile = 'DOCX';
+  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    tipeFile = 'XLSX';
+
+  const attachment = await db.rcaAttachment.create({
+    data: {
+      rcaId: rca.id,
+      fileUrl: result.url,
+      objectPath: result.path,
+      tipeFile,
+    },
+  });
+
+  return attachment;
+};

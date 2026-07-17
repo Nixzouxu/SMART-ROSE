@@ -45,6 +45,46 @@ router.get('/users/pending', userManagementController.getPendingUsers);
 
 /**
  * @openapi
+ * /admin/users:
+ *   post:
+ *     summary: Create a new admin user (ADMIN_UTAMA only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nama
+ *               - email
+ *               - noPegawai
+ *               - unitKerja
+ *             properties:
+ *               nama:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               noPegawai:
+ *                 type: string
+ *               unitKerja:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Admin user created successfully (returns plain text password once)
+ *       400:
+ *         description: Validation error or email/noPegawai already exists
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Not ADMIN_UTAMA)
+ */
+router.post('/users', requireRole(['ADMIN_UTAMA']), userManagementController.createAdminUser);
+
+/**
+ * @openapi
  * /admin/users/{id}/approve:
  *   post:
  *     summary: Approve a pending user
@@ -104,6 +144,29 @@ router.post('/users/:id/reject', userManagementController.rejectUser);
  *   name: Admin Reports
  *   description: API untuk admin reports management
  */
+
+/**
+ * @openapi
+ * /admin/reports/export:
+ *   get:
+ *     summary: Export reports list to PDF or Excel
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: format
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [excel, pdf]
+ *     responses:
+ *       200:
+ *         description: Download file
+ *       400:
+ *         description: Format invalid
+ */
+router.get('/reports/export', reportsAdminController.exportReports);
 
 /**
  * @openapi

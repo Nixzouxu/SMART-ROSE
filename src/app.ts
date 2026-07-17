@@ -15,6 +15,7 @@ import { chatbotRouter, chatbotAdminRouter } from '@/modules/chatbot/chatbot.rou
 import chatbotPublicRouter from '@/modules/chatbot/chatbot.public.routes';
 import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
 import captchaRoutes from '@/modules/captcha/captcha.routes';
+import announcementRoutes from '@/modules/announcement/announcement.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -53,6 +54,8 @@ export function createApp(): Application {
 
   // Revisi Pelaporan Publik
   app.use('/api/captcha', captchaRoutes);
+
+  app.use('/api', announcementRoutes);
 
   app.use(errorHandler); // WAJIB paling akhir, setelah semua route
 
