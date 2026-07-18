@@ -8,7 +8,7 @@ import { validate } from '@/middlewares/validate.middleware';
 import {
   adminListReportsQuerySchema,
   createReportSchema,
-  updateReportSchema,
+  adminUpdateReportSchema,
 } from '@/modules/reports/reports.schema';
 import { regradeReportSchema } from './regrade.schema';
 import { confirmPasswordMiddleware } from '@/middlewares/confirmPassword.middleware';
@@ -253,7 +253,7 @@ router.post(
  */
 router.put(
   '/reports/:id',
-  validate(updateReportSchema),
+  validate(adminUpdateReportSchema),
   auditLog('UPDATE_REPORT', 'Report', (req) => req.params.id as string),
   reportsAdminController.updateReport,
 );
