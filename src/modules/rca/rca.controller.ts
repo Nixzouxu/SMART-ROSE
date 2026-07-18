@@ -115,3 +115,34 @@ export const exportRca = async (req: AuthRequest, res: Response, next: NextFunct
     next(error);
   }
 };
+
+export const addTeamMember = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    await checkAuthorization(reportId, req.user!);
+    const member = await rcaService.addTeamMember(reportId, req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Anggota tim berhasil ditambahkan',
+      data: member,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeTeamMember = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    const memberId = req.params.memberId as string;
+    await checkAuthorization(reportId, req.user!);
+    await rcaService.removeTeamMember(reportId, memberId);
+    res.status(200).json({
+      success: true,
+      message: 'Anggota tim berhasil dihapus',
+      data: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

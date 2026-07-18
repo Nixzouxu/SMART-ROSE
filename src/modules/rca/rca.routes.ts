@@ -3,7 +3,8 @@ import { createRca, getRca, updateRca, deleteRca, exportRca } from './rca.contro
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
-import { createUpdateRcaSchema } from './rca.schema';
+import { createUpdateRcaSchema, addRcaTeamMemberSchema } from './rca.schema';
+import { addTeamMember, removeTeamMember } from './rca.controller';
 
 const router = Router();
 
@@ -191,5 +192,9 @@ router.delete('/:reportId/rca', authenticate, requireRole(['ADMIN_UTAMA']), dele
  *         description: Laporan atau RCA tidak ditemukan
  */
 router.get('/:reportId/rca/export', authenticate, exportRca);
+
+// Team Member routes
+router.post('/:reportId/rca/team', authenticate, validate(addRcaTeamMemberSchema), addTeamMember);
+router.delete('/:reportId/rca/team/:memberId', authenticate, removeTeamMember);
 
 export default router;
