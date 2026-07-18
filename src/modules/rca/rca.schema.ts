@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { StatusRca, KategoriFishbone, StatusRencanaPerbaikan } from '@prisma/client';
+import {
+  StatusRca,
+  KategoriFishbone,
+  StatusRencanaPerbaikan,
+  PeranTim,
+  JenisPengisian,
+} from '@prisma/client';
 
 export const rcaTimelineSchema = z.object({
   waktu: z.string().min(1, 'Waktu harus diisi'),
@@ -48,6 +54,8 @@ export const createUpdateRcaSchema = z.object({
     kronologiSingkat: z.string().min(1, 'Kronologi singkat harus diisi'),
     tipeSubInsiden: z.string().optional(),
     tindakanSesuaiBands: z.string().optional(),
+    tindakanBands: z.string().optional(),
+    jenisPengisian: z.nativeEnum(JenisPengisian).optional(),
     daftarInterviewee: z.array(z.string()).default([]),
     masalahAwal5Why: z.string().min(1, 'Masalah awal 5 Why harus diisi'),
     status: z.nativeEnum(StatusRca).optional(),
@@ -61,5 +69,12 @@ export const createUpdateRcaSchema = z.object({
       }),
     fishboneEntries: z.array(rcaFishboneSchema).default([]),
     rencanaPerbaikanEntries: z.array(rcaRencanaPerbaikanSchema).default([]),
+  }),
+});
+
+export const addRcaTeamMemberSchema = z.object({
+  body: z.object({
+    nama: z.string().min(1, 'Nama harus diisi'),
+    peran: z.nativeEnum(PeranTim),
   }),
 });

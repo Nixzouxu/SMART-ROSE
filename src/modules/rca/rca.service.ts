@@ -1,9 +1,11 @@
 import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
-import { createUpdateRcaSchema } from './rca.schema';
+import { createUpdateRcaSchema, addRcaTeamMemberSchema } from './rca.schema';
 import { z } from 'zod';
+import { KategoriFishbone, JenisPengisian, PeranTim } from '@prisma/client';
 
 type RcaInput = z.infer<typeof createUpdateRcaSchema>['body'];
+type RcaTeamMemberInput = z.infer<typeof addRcaTeamMemberSchema>['body'];
 
 export class RcaService {
   async createRca(reportId: string, disusunOlehId: string, payload: RcaInput) {
@@ -26,6 +28,8 @@ export class RcaService {
         kronologiSingkat: payload.kronologiSingkat,
         tipeSubInsiden: payload.tipeSubInsiden,
         tindakanSesuaiBands: payload.tindakanSesuaiBands,
+        tindakanBands: payload.tindakanBands,
+        jenisPengisian: payload.jenisPengisian,
         daftarInterviewee: payload.daftarInterviewee,
         masalahAwal5Why: payload.masalahAwal5Why,
         status: payload.status,
@@ -39,7 +43,31 @@ export class RcaService {
           create: payload.fiveWhyEntries,
         },
         fishboneEntries: {
-          create: payload.fishboneEntries,
+          create:
+            payload.jenisPengisian === JenisPengisian.TEMPLATE
+              ? [
+                  {
+                    kategori: KategoriFishbone.MAN,
+                    penyebab: 'Deskripsikan masalah terkait Manusia',
+                    urutan: 1,
+                  },
+                  {
+                    kategori: KategoriFishbone.METHOD,
+                    penyebab: 'Deskripsikan masalah terkait Metode',
+                    urutan: 2,
+                  },
+                  {
+                    kategori: KategoriFishbone.MATERIAL,
+                    penyebab: 'Deskripsikan masalah terkait Material',
+                    urutan: 3,
+                  },
+                  {
+                    kategori: KategoriFishbone.MACHINE,
+                    penyebab: 'Deskripsikan masalah terkait Mesin/Alat',
+                    urutan: 4,
+                  },
+                ]
+              : payload.fishboneEntries,
         },
         rencanaPerbaikanEntries: {
           create: payload.rencanaPerbaikanEntries,
@@ -51,6 +79,7 @@ export class RcaService {
         fiveWhyEntries: { orderBy: { urutan: 'asc' } },
         fishboneEntries: { orderBy: { urutan: 'asc' } },
         rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
+        teamMembers: true,
       },
     });
   }
@@ -65,6 +94,7 @@ export class RcaService {
         fiveWhyEntries: { orderBy: { urutan: 'asc' } },
         fishboneEntries: { orderBy: { urutan: 'asc' } },
         rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
+        teamMembers: true,
       },
     });
 
@@ -100,6 +130,8 @@ export class RcaService {
           kronologiSingkat: payload.kronologiSingkat,
           tipeSubInsiden: payload.tipeSubInsiden,
           tindakanSesuaiBands: payload.tindakanSesuaiBands,
+          tindakanBands: payload.tindakanBands,
+          jenisPengisian: payload.jenisPengisian,
           daftarInterviewee: payload.daftarInterviewee,
           masalahAwal5Why: payload.masalahAwal5Why,
           status: payload.status,
@@ -113,7 +145,32 @@ export class RcaService {
             create: payload.fiveWhyEntries,
           },
           fishboneEntries: {
-            create: payload.fishboneEntries,
+            create:
+              payload.jenisPengisian === JenisPengisian.TEMPLATE &&
+              payload.fishboneEntries.length === 0
+                ? [
+                    {
+                      kategori: KategoriFishbone.MAN,
+                      penyebab: 'Deskripsikan masalah terkait Manusia',
+                      urutan: 1,
+                    },
+                    {
+                      kategori: KategoriFishbone.METHOD,
+                      penyebab: 'Deskripsikan masalah terkait Metode',
+                      urutan: 2,
+                    },
+                    {
+                      kategori: KategoriFishbone.MATERIAL,
+                      penyebab: 'Deskripsikan masalah terkait Material',
+                      urutan: 3,
+                    },
+                    {
+                      kategori: KategoriFishbone.MACHINE,
+                      penyebab: 'Deskripsikan masalah terkait Mesin/Alat',
+                      urutan: 4,
+                    },
+                  ]
+                : payload.fishboneEntries,
           },
           rencanaPerbaikanEntries: {
             create: payload.rencanaPerbaikanEntries,
@@ -125,6 +182,7 @@ export class RcaService {
           fiveWhyEntries: { orderBy: { urutan: 'asc' } },
           fishboneEntries: { orderBy: { urutan: 'asc' } },
           rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
+          teamMembers: true,
         },
       });
     });
@@ -140,6 +198,41 @@ export class RcaService {
 
     await prisma.rootCauseAnalysis.delete({
       where: { id: existing.id },
+    });
+    return true;
+  }
+
+  async addTeamMember(reportId: string, payload: RcaTeamMemberInput) {
+    const existing = await prisma.rootCauseAnalysis.findUnique({
+      where: { reportId },
+    });
+    if (!existing) {
+      throw new ApiError(404, 'RCA tidak ditemukan');
+    }
+    return prisma.rcaTeamMember.create({
+      data: {
+        rcaId: existing.id,
+        nama: payload.nama,
+        peran: payload.peran,
+      },
+    });
+  }
+
+  async removeTeamMember(reportId: string, memberId: string) {
+    const existing = await prisma.rootCauseAnalysis.findUnique({
+      where: { reportId },
+    });
+    if (!existing) {
+      throw new ApiError(404, 'RCA tidak ditemukan');
+    }
+    const member = await prisma.rcaTeamMember.findFirst({
+      where: { id: memberId, rcaId: existing.id },
+    });
+    if (!member) {
+      throw new ApiError(404, 'Anggota tim tidak ditemukan');
+    }
+    await prisma.rcaTeamMember.delete({
+      where: { id: memberId },
     });
     return true;
   }
