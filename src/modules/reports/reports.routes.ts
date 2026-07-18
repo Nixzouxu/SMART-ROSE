@@ -8,7 +8,11 @@ import {
   updateReportSchema,
   listReportsQuerySchema,
 } from './reports.schema';
-import { uploadMiddleware, uploadRcaMiddleware } from '@/middlewares/upload.middleware';
+import {
+  uploadMiddleware,
+  uploadRcaMiddleware,
+  validateMagicBytes,
+} from '@/middlewares/upload.middleware';
 import * as attachmentController from './attachment.controller';
 import { publicRateLimit } from '@/middlewares/publicRateLimit.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
@@ -196,6 +200,7 @@ router.post(
   '/:id/attachments',
   publicRateLimit,
   uploadMiddleware.single('file'),
+  validateMagicBytes,
   attachmentController.uploadAttachment,
 );
 
@@ -321,6 +326,7 @@ router.post(
   authenticate,
   requireRole(['ADMIN', 'ADMIN_UTAMA']),
   uploadRcaMiddleware.single('file'),
+  validateMagicBytes,
   attachmentController.uploadRcaAttachment,
 );
 

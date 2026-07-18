@@ -56,3 +56,38 @@ export const uploadRcaMiddleware = multer({
     cb(null, true);
   },
 });
+
+import { Request, Response, NextFunction } from 'express';
+import * as fileType from 'file-type';
+
+export const validateMagicBytes = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.file) {
+    return next();
+  }
+
+  try {
+    const typeInfo = await fileType.fromBuffer(req.file.buffer);
+    if (!typeInfo) {
+      throw new ApiError(400, 'Tipe file tidak dikenali atau file rusak.');
+    }
+
+    // Mime type asli dari library file-type
+    const realMimeType = typeInfo.mime;
+
+    // Pastikan realMimeType ada di whitelist global kita atau sesuai kebutuhan endpoint
+    // Karena middleware ini bisa dipakai di attachment biasa maupun RCA,
+    // kita cukup mengecek apakah mime aslinya didukung secara global
+    if (!allowedMimeTypes.includes(realMimeType)) {
+      throw new ApiError(
+        400,
+        `Isi file tidak sesuai (terdeteksi: ${realMimeType}). Pemalsuan ekstensi tidak diizinkan.`,
+      );
+    }
+
+    // Timpa mimetype dari client dengan mimetype asli yang tervalidasi
+    req.file.mimetype = realMimeType;
+    next();
+  } catch (error) {
+    next(error);
+  }
+};

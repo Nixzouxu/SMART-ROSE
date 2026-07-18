@@ -13,7 +13,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res
         .status(400)
-        .json({ success: false, message: 'Ukuran file melebihi batas maksimal 5MB.' });
+        .json({ success: false, message: 'Ukuran file melebihi batas maksimal yang diizinkan.' });
     }
     return res.status(400).json({ success: false, message: `Error upload file: ${err.message}` });
   }

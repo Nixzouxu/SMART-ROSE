@@ -39,3 +39,14 @@ backups/
 
 # Temp files (ekspor test, debug sementara)
 tmp/
+
+# Sensitive files & credentials
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+credentials.md
+secret.md
+pass.md
+keys.txt
