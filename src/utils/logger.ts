@@ -9,5 +9,18 @@ export const logger = pino({
           target: 'pino-pretty',
           options: { colorize: true, translateTime: 'SYS:standard', ignore: 'pid,hostname' },
         }
-      : undefined,
+      : {
+          targets: [
+            { target: 'pino/file', options: { destination: 1 } }, // stdout
+            {
+              target: 'pino-roll',
+              options: {
+                file: 'logs/smartrose',
+                frequency: 'daily',
+                mkdir: true,
+                extension: '.log',
+              },
+            },
+          ],
+        },
 });
