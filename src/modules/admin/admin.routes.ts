@@ -11,6 +11,8 @@ import {
   updateReportSchema,
 } from '@/modules/reports/reports.schema';
 import { regradeReportSchema } from './regrade.schema';
+import { confirmPasswordMiddleware } from '@/middlewares/confirmPassword.middleware';
+import { auditLog } from '@/middlewares/audit.middleware';
 
 const router = Router();
 
@@ -81,7 +83,12 @@ router.get('/users/pending', userManagementController.getPendingUsers);
  *       403:
  *         description: Forbidden (Not ADMIN_UTAMA)
  */
-router.post('/users', requireRole(['ADMIN_UTAMA']), userManagementController.createAdminUser);
+router.post(
+  '/users',
+  requireRole(['ADMIN_UTAMA']),
+  auditLog('CREATE_ADMIN', 'User'),
+  userManagementController.createAdminUser,
+);
 
 /**
  * @openapi
@@ -108,7 +115,11 @@ router.post('/users', requireRole(['ADMIN_UTAMA']), userManagementController.cre
  *       404:
  *         description: User not found
  */
-router.post('/users/:id/approve', userManagementController.approveUser);
+router.post(
+  '/users/:id/approve',
+  auditLog('APPROVE_USER', 'User', (req) => req.params.id as string),
+  userManagementController.approveUser,
+);
 
 /**
  * @openapi
@@ -135,7 +146,11 @@ router.post('/users/:id/approve', userManagementController.approveUser);
  *       404:
  *         description: User not found
  */
-router.post('/users/:id/reject', userManagementController.rejectUser);
+router.post(
+  '/users/:id/reject',
+  auditLog('REJECT_USER', 'User', (req) => req.params.id as string),
+  userManagementController.rejectUser,
+);
 
 // --- Admin Reports ---
 /**
@@ -212,7 +227,12 @@ router.get('/reports/:id', reportsAdminController.getReportDetail);
  *       201:
  *         description: Created
  */
-router.post('/reports', validate(createReportSchema), reportsAdminController.createManualReport);
+router.post(
+  '/reports',
+  validate(createReportSchema),
+  auditLog('CREATE_MANUAL_REPORT', 'Report'),
+  reportsAdminController.createManualReport,
+);
 /**
  * @openapi
  * /admin/reports/{id}:
@@ -231,7 +251,12 @@ router.post('/reports', validate(createReportSchema), reportsAdminController.cre
  *       200:
  *         description: Updated
  */
-router.put('/reports/:id', validate(updateReportSchema), reportsAdminController.updateReport);
+router.put(
+  '/reports/:id',
+  validate(updateReportSchema),
+  auditLog('UPDATE_REPORT', 'Report', (req) => req.params.id as string),
+  reportsAdminController.updateReport,
+);
 /**
  * @openapi
  * /admin/reports/{id}/assign:
@@ -250,7 +275,11 @@ router.put('/reports/:id', validate(updateReportSchema), reportsAdminController.
  *       200:
  *         description: Assigned
  */
-router.post('/reports/:id/assign', reportsAdminController.assignReport);
+router.post(
+  '/reports/:id/assign',
+  auditLog('ASSIGN_REPORT', 'Report', (req) => req.params.id as string),
+  reportsAdminController.assignReport,
+);
 /**
  * @openapi
  * /admin/reports/{id}/archive:
@@ -269,7 +298,11 @@ router.post('/reports/:id/assign', reportsAdminController.assignReport);
  *       200:
  *         description: Archived
  */
-router.post('/reports/:id/archive', reportsAdminController.archiveReport);
+router.post(
+  '/reports/:id/archive',
+  auditLog('ARCHIVE_REPORT', 'Report', (req) => req.params.id as string),
+  reportsAdminController.archiveReport,
+);
 
 // Delete permanen khusus ADMIN_UTAMA
 /**
@@ -293,6 +326,8 @@ router.post('/reports/:id/archive', reportsAdminController.archiveReport);
 router.delete(
   '/reports/:id/hard',
   requireRole(['ADMIN_UTAMA']),
+  confirmPasswordMiddleware,
+  auditLog('HARD_DELETE_REPORT', 'Report', (req) => req.params.id as string),
   reportsAdminController.hardDeleteReport,
 );
 
@@ -337,6 +372,7 @@ router.delete(
 router.put(
   '/reports/:id/regrade',
   validate(regradeReportSchema),
+  auditLog('REGRADE_REPORT', 'Report', (req) => req.params.id as string),
   reportsAdminController.regradeReportHandler,
 );
 

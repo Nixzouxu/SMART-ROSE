@@ -17,6 +17,9 @@ import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
 import captchaRoutes from '@/modules/captcha/captcha.routes';
 import announcementRoutes from '@/modules/announcement/announcement.routes';
 
+import { globalRateLimit } from '@/middlewares/globalRateLimit.middleware';
+import { sanitizeMiddleware } from '@/middlewares/sanitize.middleware';
+
 export function createApp(): Application {
   const app = express();
 
@@ -24,8 +27,14 @@ export function createApp(): Application {
   app.set('trust proxy', 1);
 
   app.use(helmet());
-  app.use(cors());
+  app.use(
+    cors({
+      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    }),
+  );
+  app.use(globalRateLimit);
   app.use(express.json({ limit: '5mb' }));
+  app.use(sanitizeMiddleware);
   app.use(cookieParser());
   app.use(requestLogger);
 

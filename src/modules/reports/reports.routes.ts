@@ -12,6 +12,7 @@ import { uploadMiddleware, uploadRcaMiddleware } from '@/middlewares/upload.midd
 import * as attachmentController from './attachment.controller';
 import { publicRateLimit } from '@/middlewares/publicRateLimit.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
+import { auditLog } from '@/middlewares/audit.middleware';
 
 const router = Router();
 
@@ -147,6 +148,7 @@ router.post(
   '/',
   publicRateLimit,
   validate(createReportPublicSchema),
+  auditLog('CREATE_PUBLIC_REPORT', 'Report'),
   reportsController.createReportPublic,
 );
 
@@ -255,6 +257,7 @@ router.put(
   '/me/:id',
   authenticate,
   validate(updateReportSchema),
+  auditLog('UPDATE_MY_REPORT', 'Report', (req) => req.params.id as string),
   reportsController.updateDraftReport,
 );
 
@@ -276,7 +279,12 @@ router.put(
  *       200:
  *         description: Deleted
  */
-router.delete('/me/:id', authenticate, reportsController.deleteDraftReport);
+router.delete(
+  '/me/:id',
+  authenticate,
+  auditLog('DELETE_MY_REPORT', 'Report', (req) => req.params.id as string),
+  reportsController.deleteDraftReport,
+);
 
 /**
  * @openapi

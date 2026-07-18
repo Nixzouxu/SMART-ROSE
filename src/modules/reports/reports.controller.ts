@@ -7,6 +7,7 @@ export const createReport = async (req: AuthRequest, res: Response, next: NextFu
   try {
     const userId = req.user!.userId;
     const report = await reportsService.createReport(userId, req.body);
+    res.locals.entityId = report.id;
 
     res.status(201).json({
       success: true,
@@ -34,6 +35,7 @@ export const createReportPublic = async (req: Request, res: Response, next: Next
       isAnonim: true, // Laporan publik selalu anonim
       status: 'SUBMITTED', // Laporan publik selalu langsung SUBMITTED
     });
+    res.locals.entityId = report.id;
 
     res.status(201).json({
       success: true,

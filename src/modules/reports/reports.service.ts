@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/config/db';
 import { generateTrackingNumber } from './trackingNumber.util';
 import { ApiError } from '@/utils/apiError';
+import { encryptText, decryptText } from '@/utils/encryption';
 
 // Fungsi bantuan untuk menutupi (mask) pelaporId jika laporan bersifat anonim.
 // IsAnonim pada database TIDAK menghapus pelaporId. Ini penting agar tim investigasi internal
@@ -10,6 +11,9 @@ import { ApiError } from '@/utils/apiError';
 // identitas akan disembunyikan.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const maskAnonimReport = (report: any) => {
+  if (report.kronologi) {
+    report.kronologi = decryptText(report.kronologi);
+  }
   if (report.isAnonim) {
     return {
       ...report,
@@ -43,6 +47,7 @@ export const createReport = async (pelaporId: string | null, data: CreateReportI
 
   const reportData: Prisma.ReportUncheckedCreateInput = {
     ...rest,
+    kronologi: encryptText(rest.kronologi),
     status: finalStatus,
     pelaporId: pelaporId ?? null,
     trackingNumber,
@@ -80,12 +85,14 @@ export const updateDraftReport = async (
     trackingNumber = await generateTrackingNumber();
   }
 
+  const updatedData: Record<string, unknown> = { ...data, trackingNumber };
+  if (data.kronologi) {
+    updatedData.kronologi = encryptText(data.kronologi);
+  }
+
   const updatedReport = await db.report.update({
     where: { id: reportId },
-    data: {
-      ...data,
-      trackingNumber,
-    },
+    data: updatedData,
   });
 
   return maskAnonimReport(updatedReport);
