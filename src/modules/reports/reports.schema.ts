@@ -68,6 +68,30 @@ export const updateReportSchema = z.object({
   }),
 });
 
+export const adminUpdateReportSchema = z.object({
+  body: z.object({
+    jenisInsiden: z.enum(['KTD', 'KNC', 'KTC', 'KPC', 'SENTINEL']).optional(),
+    tanggalKejadian: z.coerce.date().optional(),
+    lokasi: z.string().optional(),
+    unitKerja: z.string().optional(),
+    kronologi: z.string().min(10).max(5000).optional(),
+    dampak: z.string().optional(),
+    gradingAwal: z.enum(['HIJAU', 'BIRU', 'KUNING', 'MERAH']).optional(),
+    isAnonim: z.boolean().optional(),
+    status: z
+      .enum([
+        'DRAFT',
+        'SUBMITTED',
+        'DALAM_INVESTIGASI',
+        'MENUNGGU_VERIFIKASI',
+        'SELESAI',
+        'OVERDUE',
+        'ARSIP',
+      ])
+      .optional(),
+  }),
+});
+
 export const listReportsQuerySchema = z.object({
   query: z.object({
     page: z.coerce.number().min(1).default(1),
