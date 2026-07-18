@@ -5,11 +5,33 @@ import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
+import { Report, Prisma } from '@prisma/client';
+
+type ReportWithRelations = Prisma.ReportGetPayload<{
+  include: {
+    pelapor: { select: { id: true; nama: true; unitKerja: true } };
+    assignedTo: { select: { id: true; nama: true } };
+  };
+}>;
+
+type RcaWithRelations = Prisma.RootCauseAnalysisGetPayload<{
+  include: {
+    disusunOleh: { select: { id: true; nama: true } };
+    timelineEntries: { orderBy: { urutan: 'asc' } };
+    timePersonGridEntries: { orderBy: { urutan: 'asc' } };
+    fiveWhyEntries: { orderBy: { urutan: 'asc' } };
+    fishboneEntries: { orderBy: { urutan: 'asc' } };
+    rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } };
+  };
+}>;
 
 interface RcaData {
-  report: Report;
-  rca: import('@prisma/client').RootCauseAnalysis;
+  report: ReportWithRelations;
+  rca: RcaWithRelations;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DashboardData = any;
 
 /**
  * Ambil data RCA lengkap beserta report-nya dari database.
@@ -613,7 +635,8 @@ export const generateDashboardExcel = async (
 
   if (cakupan.includes('grafikJenisInsiden') && data.grafikJenisInsiden) {
     sheet.addRow(['Grafik Jenis Insiden']).font = { bold: true };
-    data.grafikJenisInsiden.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data.grafikJenisInsiden.forEach((item: any) => {
       sheet.addRow([item.jenisInsiden, item._count]);
     });
     sheet.addRow([]);
@@ -621,7 +644,8 @@ export const generateDashboardExcel = async (
 
   if (cakupan.includes('grafikGrading') && data.grafikGrading) {
     sheet.addRow(['Grafik Grading']).font = { bold: true };
-    data.grafikGrading.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data.grafikGrading.forEach((item: any) => {
       sheet.addRow([item.gradingFinal || item.gradingAwal, item._count]);
     });
     sheet.addRow([]);
@@ -629,7 +653,8 @@ export const generateDashboardExcel = async (
 
   if (cakupan.includes('trenBulanan') && data.trenBulanan) {
     sheet.addRow(['Tren Bulanan']).font = { bold: true };
-    data.trenBulanan.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data.trenBulanan.forEach((item: any) => {
       sheet.addRow([item.bulan, item.jumlah]);
     });
   }
@@ -664,7 +689,8 @@ export const generateDashboardPdf = async (
     if (cakupan.includes('grafikJenisInsiden') && data.grafikJenisInsiden) {
       doc.font('Helvetica-Bold').fontSize(12).text('Grafik Jenis Insiden');
       doc.font('Helvetica').fontSize(10);
-      data.grafikJenisInsiden.forEach((item) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.grafikJenisInsiden.forEach((item: any) => {
         doc.text(`${item.jenisInsiden}: ${item._count}`);
       });
       doc.moveDown(1.5);
@@ -673,7 +699,8 @@ export const generateDashboardPdf = async (
     if (cakupan.includes('grafikGrading') && data.grafikGrading) {
       doc.font('Helvetica-Bold').fontSize(12).text('Grafik Grading');
       doc.font('Helvetica').fontSize(10);
-      data.grafikGrading.forEach((item) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.grafikGrading.forEach((item: any) => {
         doc.text(`${item.gradingFinal || item.gradingAwal}: ${item._count}`);
       });
       doc.moveDown(1.5);
@@ -682,7 +709,8 @@ export const generateDashboardPdf = async (
     if (cakupan.includes('trenBulanan') && data.trenBulanan) {
       doc.font('Helvetica-Bold').fontSize(12).text('Tren Bulanan');
       doc.font('Helvetica').fontSize(10);
-      data.trenBulanan.forEach((item) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.trenBulanan.forEach((item: any) => {
         doc.text(`${item.bulan}: ${item.jumlah}`);
       });
     }

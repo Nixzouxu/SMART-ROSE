@@ -6,6 +6,7 @@ import { generateTrackingNumber } from '@/modules/reports/trackingNumber.util';
 import { Prisma, StatusLaporan, JenisInsiden } from '@prisma/client';
 import { regradeReport } from './regrade.service';
 import { generateMassReportExcel, generateMassReportPdf } from '@/modules/reports/export.service';
+import { decryptText, encryptText } from '@/utils/encryption';
 
 export const listReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -53,7 +54,10 @@ export const listReports = async (req: AuthRequest, res: Response, next: NextFun
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data: reports, // Admin melihat semuanya, tidak di mask!
+        data: reports.map((r) => ({
+          ...r,
+          kronologi: r.kronologi ? decryptText(r.kronologi) : r.kronologi,
+        })), // Admin melihat semuanya, tidak di mask!
       },
     });
   } catch (error) {
@@ -88,6 +92,10 @@ export const getReportDetail = async (req: AuthRequest, res: Response, next: Nex
       throw new ApiError(404, 'Laporan tidak ditemukan');
     }
 
+    if (report.kronologi) {
+      report.kronologi = decryptText(report.kronologi);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Berhasil mengambil detail laporan',
@@ -112,6 +120,7 @@ export const createManualReport = async (req: AuthRequest, res: Response, next: 
     const report = await db.report.create({
       data: {
         ...rest,
+        kronologi: encryptText(rest.kronologi),
         status: finalStatus,
         pelaporId: userId,
         trackingNumber,
@@ -158,12 +167,14 @@ export const updateReport = async (req: AuthRequest, res: Response, next: NextFu
       },
     });
 
+    const updatedData: Record<string, unknown> = { ...updateData, trackingNumber };
+    if (updateData.kronologi) {
+      updatedData.kronologi = encryptText(updateData.kronologi);
+    }
+
     const updatedReport = await db.report.update({
       where: { id },
-      data: {
-        ...updateData,
-        trackingNumber,
-      },
+      data: updatedData,
     });
 
     res.status(200).json({
@@ -332,8 +343,13 @@ export const exportReports = async (req: AuthRequest, res: Response, next: NextF
       orderBy: { createdAt: 'desc' },
     });
 
+    const decryptedReports = reports.map((r) => ({
+      ...r,
+      kronologi: r.kronologi ? decryptText(r.kronologi) : r.kronologi,
+    }));
+
     if (format === 'excel') {
-      const buffer = await generateMassReportExcel(reports);
+      const buffer = await generateMassReportExcel(decryptedReports);
       res.setHeader(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -341,7 +357,7 @@ export const exportReports = async (req: AuthRequest, res: Response, next: NextF
       res.setHeader('Content-Disposition', 'attachment; filename="export-laporan.xlsx"');
       return res.send(buffer);
     } else if (format === 'pdf') {
-      const buffer = await generateMassReportPdf(reports);
+      const buffer = await generateMassReportPdf(decryptedReports);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="export-laporan.pdf"');
       return res.send(buffer);
