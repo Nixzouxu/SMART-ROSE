@@ -2,7 +2,7 @@ import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
 import { createUpdateRcaSchema, addRcaTeamMemberSchema } from './rca.schema';
 import { z } from 'zod';
-import { KategoriFishbone, JenisPengisian, PeranTim } from '@prisma/client';
+import { KategoriFishbone, JenisPengisian } from '@prisma/client';
 
 type RcaInput = z.infer<typeof createUpdateRcaSchema>['body'];
 type RcaTeamMemberInput = z.infer<typeof addRcaTeamMemberSchema>['body'];
