@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.production
+.env.staging
+.env.development
+.env.test
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+prisma/*.db
+
+# Docker
+docker-compose.override.yml
+
+# Backup lokal (jangan ikut ter-commit)
+backups/
+
+# Temp files (ekspor test, debug sementara)
+tmp/
+
+# Sensitive files & credentials
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+credentials.md
+secret.md
+pass.md
+keys.txt

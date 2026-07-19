@@ -1,0 +1,475 @@
+// prisma/schema.prisma
+// Schema database lengkap (Fase 1)
+// Prisma 7+: konfigurasi datasource URL dan environment loading ada di prisma.config.ts
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoleType {
+  USER
+  ADMIN
+  ADMIN_UTAMA
+}
+
+enum StatusVerifikasi {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JenisInsiden {
+  KTD
+  KNC
+  KTC
+  KPC
+  SENTINEL
+}
+
+enum GradingRisiko {
+  HIJAU
+  BIRU
+  KUNING
+  MERAH
+}
+
+enum StatusLaporan {
+  DRAFT
+  SUBMITTED
+  DALAM_INVESTIGASI
+  MENUNGGU_VERIFIKASI
+  SELESAI
+  OVERDUE
+  ARSIP
+}
+
+enum TipeFile {
+  JPG
+  PNG
+  PDF
+}
+
+enum TipeMedia {
+  TEXT
+  IMAGE
+  VIDEO
+}
+
+enum TipeNotifikasi {
+  LAPORAN_BARU
+  STATUS_BERUBAH
+  DEADLINE_MENDEKAT
+  DEADLINE_LEWAT
+  CHATBOT_DIJAWAB
+  PENGUMUMAN
+}
+
+enum StatusEskalasiChatbot {
+  TERJAWAB_OTOMATIS
+  MENUNGGU_ADMIN
+  DIJAWAB_ADMIN
+}
+
+enum TargetRole {
+  SEMUA
+  USER
+  ADMIN
+}
+
+enum StatusRca {
+  DRAFT
+  FINAL
+}
+
+enum KategoriFishbone {
+  MAN
+  METHOD
+  MATERIAL
+  MACHINE
+  MEASUREMENT
+  ENVIRONMENT
+}
+
+enum StatusRencanaPerbaikan {
+  BELUM_MULAI
+  BERJALAN
+  SELESAI
+}
+
+enum StatusPasienSaatInsiden {
+  RAWAT_INAP
+  RAWAT_JALAN
+  IGD
+  LAIN_LAIN
+}
+
+enum KategoriPelapor {
+  PASIEN_SENDIRI
+  KELUARGA
+  STAF
+  LAIN_LAIN
+}
+
+enum AkibatPasien {
+  SANGAT_RINGAN
+  RINGAN
+  SEDANG
+  BERAT
+  SANGAT_BERAT
+}
+
+enum TipeFileRca {
+  PDF
+  DOCX
+  XLSX
+}
+
+enum PeranTim {
+  KETUA
+  SEKRETARIS
+  ANGGOTA
+}
+
+enum JenisPengisian {
+  TEMPLATE
+  CUSTOM
+}
+
+model User {
+  id               String           @id @default(uuid())
+  nama             String
+  email            String           @unique
+  noPegawai        String           @unique @map("no_pegawai")
+  passwordHash     String           @map("password_hash")
+  role             RoleType         @default(USER)
+  unitKerja        String           @map("unit_kerja")
+  fotoProfil       String?          @map("foto_profil")
+  statusVerifikasi StatusVerifikasi @default(PENDING) @map("status_verifikasi")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  reports         Report[]            @relation("Pelapor")
+  reportHistories ReportHistory[]     @relation("Actor")
+  chatbotLogs     ChatbotLog[]
+  notifications   Notification[]
+  announcements   Announcement[]
+  assignedReports Report[]            @relation("AssignedAdmin")
+  rcaDisusun      RootCauseAnalysis[] @relation("RcaDisusunOleh")
+
+  @@index([email])
+  @@index([noPegawai])
+  @@map("users")
+}
+
+model Report {
+  id                                String                   @id @default(uuid())
+  trackingNumber                    String?                  @unique @map("tracking_number")
+  jenisInsiden                      JenisInsiden             @map("jenis_insiden")
+  tanggalKejadian                   DateTime                 @map("tanggal_kejadian")
+  lokasi                            String
+  unitKerja                         String                   @map("unit_kerja")
+  kronologi                         String                   @db.Text
+  dampak                            String                   @db.Text
+  gradingAwal                       GradingRisiko            @map("grading_awal")
+  gradingFinal                      GradingRisiko?           @map("grading_final")
+  status                            StatusLaporan            @default(DRAFT)
+  isAnonim                          Boolean                  @default(false) @map("is_anonim")
+  melibatkanPasien                  Boolean                  @default(true) @map("melibatkan_pasien")
+  namaPasien                        String?                  @map("nama_pasien")
+  noRekamMedis                      String?                  @map("no_rekam_medis")
+  ruanganPasien                     String?                  @map("ruangan_pasien")
+  umurPasien                        Int?                     @map("umur_pasien")
+  jenisKelaminPasien                String?                  @map("jenis_kelamin_pasien")
+  statusPasienSaatInsiden           StatusPasienSaatInsiden? @map("status_pasien_saat_insiden")
+  penanggungBiaya                   String?                  @map("penanggung_biaya")
+  tanggalJamMasukRs                 DateTime?                @map("tanggal_jam_masuk_rs")
+  kategoriPelaporPertama            KategoriPelapor?         @map("kategori_pelapor_pertama")
+  pihakTerlibat                     String[]                 @default([]) @map("pihak_terlibat")
+  kasusSpesialisasi                 String?                  @map("kasus_spesialisasi")
+  akibatTerhadapPasien              AkibatPasien?            @map("akibat_terhadap_pasien")
+  apakahKejadianSerupaPernahTerjadi Boolean?                 @map("apakah_kejadian_serupa_pernah_terjadi")
+
+  catatanInvestigasi  String?   @map("catatan_investigasi") @db.Text
+  deadlineInvestigasi DateTime? @map("deadline_investigasi")
+  assignedToId        String?   @map("assigned_to_id")
+  pelaporId           String?   @map("pelapor_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+
+  pelapor     User?              @relation("Pelapor", fields: [pelaporId], references: [id])
+  assignedTo  User?              @relation("AssignedAdmin", fields: [assignedToId], references: [id])
+  attachments ReportAttachment[]
+  histories   ReportHistory[]
+  rca         RootCauseAnalysis?
+
+  @@index([status])
+  @@index([jenisInsiden])
+  @@index([createdAt])
+  @@index([status, unitKerja])
+  @@map("reports")
+}
+
+model ReportAttachment {
+  id         String   @id @default(uuid())
+  reportId   String   @map("report_id")
+  fileUrl    String   @map("file_url")
+  objectPath String   @map("object_path")
+  tipeFile   TipeFile @map("tipe_file")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_attachments")
+}
+
+model ReportHistory {
+  id        String   @id @default(uuid())
+  reportId  String   @map("report_id")
+  actorId   String   @map("actor_id")
+  aksi      String
+  perubahan Json
+  timestamp DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  actor  User   @relation("Actor", fields: [actorId], references: [id])
+
+  @@index([reportId])
+  @@index([actorId])
+  @@map("report_histories")
+}
+
+model Guide {
+  id        String    @id @default(uuid())
+  judul     String
+  kategori  String
+  konten    String    @db.Text
+  tipeMedia TipeMedia @default(TEXT) @map("tipe_media")
+  mediaUrl  String?   @map("media_url")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("guides")
+}
+
+model ChatbotKnowledge {
+  id         String   @id @default(uuid())
+  pertanyaan String
+  jawaban    String   @db.Text
+  kategori   String
+  kataKunci  String[] @map("kata_kunci")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("chatbot_knowledges")
+}
+
+model ChatbotLog {
+  id             String                @id @default(uuid())
+  userId         String?               @map("user_id")
+  pertanyaan     String
+  jawaban        String?               @db.Text
+  statusEskalasi StatusEskalasiChatbot @default(TERJAWAB_OTOMATIS) @map("status_eskalasi")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([statusEskalasi])
+  @@map("chatbot_logs")
+}
+
+model Notification {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  tipe      TipeNotifikasi
+  pesan     String
+  isRead    Boolean        @default(false) @map("is_read")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Announcement {
+  id         String     @id @default(uuid())
+  adminId    String     @map("admin_id")
+  judul      String
+  isi        String     @db.Text
+  targetRole TargetRole @default(SEMUA) @map("target_role")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@map("announcements")
+}
+
+model RootCauseAnalysis {
+  id                  String          @id @default(uuid())
+  reportId            String          @unique @map("report_id")
+  timKetua            String?         @map("tim_ketua")
+  timSekretaris       String?         @map("tim_sekretaris")
+  timAnggota          String[]        @map("tim_anggota")
+  observasi           String?         @db.Text
+  dokumentasi         String?         @db.Text
+  kronologiSingkat    String          @map("kronologi_singkat") @db.Text
+  tipeSubInsiden      String?         @map("tipe_sub_insiden")
+  tindakanSesuaiBands String?         @map("tindakan_sesuai_bands") @db.Text
+  tindakanBands       String?         @map("tindakan_bands")
+  daftarInterviewee   String[]        @map("daftar_interviewee")
+  masalahAwal5Why     String          @map("masalah_awal_5_why") @db.Text
+  status              StatusRca       @default(DRAFT)
+  jenisPengisian      JenisPengisian? @map("jenis_pengisian")
+  disusunOlehId       String          @map("disusun_oleh_id")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  report      Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  disusunOleh User   @relation("RcaDisusunOleh", fields: [disusunOlehId], references: [id])
+
+  timelineEntries         RcaTimelineEntry[]
+  timePersonGridEntries   RcaTimePersonGridEntry[]
+  fiveWhyEntries          RcaFiveWhy[]
+  fishboneEntries         RcaFishboneEntry[]
+  rencanaPerbaikanEntries RcaRencanaPerbaikan[]
+  attachments             RcaAttachment[]
+  teamMembers             RcaTeamMember[]
+
+  @@index([reportId])
+  @@index([disusunOlehId])
+  @@map("root_cause_analyses")
+}
+
+model RcaTeamMember {
+  id        String   @id @default(uuid())
+  rcaId     String   @map("rca_id")
+  nama      String
+  peran     PeranTim
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_team_members")
+}
+
+model RcaTimelineEntry {
+  id                String   @id @default(uuid())
+  rcaId             String   @map("rca_id")
+  waktu             String
+  kejadian          String   @db.Text
+  informasiTambahan String?  @map("informasi_tambahan") @db.Text
+  goodPractice      String?  @map("good_practice") @db.Text
+  masalahPelayanan  String?  @map("masalah_pelayanan") @db.Text
+  urutan            Int
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_timeline_entries")
+}
+
+model RcaTimePersonGridEntry {
+  id        String   @id @default(uuid())
+  rcaId     String   @map("rca_id")
+  staf      String
+  waktu     String
+  deskripsi String   @db.Text
+  urutan    Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_time_person_grid_entries")
+}
+
+model RcaFiveWhy {
+  id        String   @id @default(uuid())
+  rcaId     String   @map("rca_id")
+  urutan    Int
+  jawaban   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_five_whys")
+}
+
+model RcaFishboneEntry {
+  id        String           @id @default(uuid())
+  rcaId     String           @map("rca_id")
+  kategori  KategoriFishbone
+  penyebab  String           @db.Text
+  urutan    Int
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_fishbone_entries")
+}
+
+model RcaRencanaPerbaikan {
+  id                String                 @id @default(uuid())
+  rcaId             String                 @map("rca_id")
+  akarMasalah       String                 @map("akar_masalah") @db.Text
+  rekomendasiSolusi String                 @map("rekomendasi_solusi") @db.Text
+  tindakanPerbaikan String                 @map("tindakan_perbaikan") @db.Text
+  pelaksana         String
+  targetWaktu       String                 @map("target_waktu")
+  status            StatusRencanaPerbaikan @default(BELUM_MULAI)
+  urutan            Int
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_rencana_perbaikan")
+}
+
+model RcaAttachment {
+  id         String      @id @default(uuid())
+  rcaId      String      @map("rca_id")
+  fileUrl    String      @map("file_url")
+  objectPath String      @map("object_path")
+  tipeFile   TipeFileRca @map("tipe_file")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+
+  @@index([rcaId])
+  @@map("rca_attachments")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
