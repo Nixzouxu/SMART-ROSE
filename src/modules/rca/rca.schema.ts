@@ -5,6 +5,7 @@ import {
   StatusRencanaPerbaikan,
   PeranTim,
   JenisPengisian,
+  JenisInvestigasi,
 } from '@prisma/client';
 
 export const rcaTimelineSchema = z.object({
@@ -56,6 +57,7 @@ export const createUpdateRcaSchema = z.object({
     tindakanSesuaiBands: z.string().optional(),
     tindakanBands: z.string().optional(),
     jenisPengisian: z.nativeEnum(JenisPengisian).optional(),
+    jenisInvestigasi: z.nativeEnum(JenisInvestigasi).optional(),
     daftarInterviewee: z.array(z.string()).default([]),
     masalahAwal5Why: z.string().min(1, 'Masalah awal 5 Why harus diisi'),
     status: z.nativeEnum(StatusRca).optional(),
@@ -76,5 +78,12 @@ export const addRcaTeamMemberSchema = z.object({
   body: z.object({
     nama: z.string().min(1, 'Nama harus diisi'),
     peran: z.nativeEnum(PeranTim),
+  }),
+});
+
+export const persetujuanRcaSchema = z.object({
+  body: z.object({
+    keputusan: z.enum(['setuju', 'revisi']),
+    catatan: z.string().optional(),
   }),
 });

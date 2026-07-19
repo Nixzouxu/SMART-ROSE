@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '@/middlewares/auth.middleware';
 import * as reportsService from './reports.service';
 import * as captchaService from '@/modules/captcha/captcha.service';
+import { ApiError } from '@/utils/apiError';
 
 export const createReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -27,8 +28,13 @@ export const createReportPublic = async (req: Request, res: Response, next: Next
   try {
     const { captchaToken, captchaJawaban, ...reportData } = req.body;
 
-    // Validasi captcha (single-use, token dihapus setelah validasi)
-    await captchaService.verifyCaptcha(captchaToken, captchaJawaban);
+    if (captchaToken || captchaJawaban) {
+      if (!captchaToken || !captchaJawaban) {
+        throw new ApiError(400, 'captchaToken dan captchaJawaban harus dikirim bersamaan');
+      }
+      // Validasi captcha (single-use, token dihapus setelah validasi)
+      await captchaService.verifyCaptcha(captchaToken, captchaJawaban);
+    }
 
     const report = await reportsService.createReport(null, {
       ...reportData,

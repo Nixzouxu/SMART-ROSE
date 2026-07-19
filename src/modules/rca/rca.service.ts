@@ -30,6 +30,7 @@ export class RcaService {
         tindakanSesuaiBands: payload.tindakanSesuaiBands,
         tindakanBands: payload.tindakanBands,
         jenisPengisian: payload.jenisPengisian,
+        jenisInvestigasi: payload.jenisInvestigasi,
         daftarInterviewee: payload.daftarInterviewee,
         masalahAwal5Why: payload.masalahAwal5Why,
         status: payload.status,
@@ -132,6 +133,7 @@ export class RcaService {
           tindakanSesuaiBands: payload.tindakanSesuaiBands,
           tindakanBands: payload.tindakanBands,
           jenisPengisian: payload.jenisPengisian,
+          jenisInvestigasi: payload.jenisInvestigasi,
           daftarInterviewee: payload.daftarInterviewee,
           masalahAwal5Why: payload.masalahAwal5Why,
           status: payload.status,
@@ -235,6 +237,25 @@ export class RcaService {
       where: { id: memberId },
     });
     return true;
+  }
+
+  async persetujuanRca(reportId: string, keputusan: 'setuju' | 'revisi', catatan?: string) {
+    const existing = await prisma.rootCauseAnalysis.findUnique({
+      where: { reportId },
+    });
+    if (!existing) {
+      throw new ApiError(404, 'RCA tidak ditemukan');
+    }
+
+    const status = keputusan === 'setuju' ? 'DISETUJUI' : 'PERLU_REVISI';
+
+    return prisma.rootCauseAnalysis.update({
+      where: { id: existing.id },
+      data: {
+        status,
+        catatanRevisi: catatan || null,
+      },
+    });
   }
 }
 

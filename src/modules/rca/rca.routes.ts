@@ -3,8 +3,9 @@ import { createRca, getRca, updateRca, deleteRca, exportRca } from './rca.contro
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
-import { createUpdateRcaSchema, addRcaTeamMemberSchema } from './rca.schema';
-import { addTeamMember, removeTeamMember } from './rca.controller';
+import { createUpdateRcaSchema, addRcaTeamMemberSchema, persetujuanRcaSchema } from './rca.schema';
+import { addTeamMember, removeTeamMember, persetujuanRca } from './rca.controller';
+import { auditLog } from '@/middlewares/audit.middleware';
 
 const router = Router();
 
@@ -196,5 +197,44 @@ router.get('/:reportId/rca/export', authenticate, exportRca);
 // Team Member routes
 router.post('/:reportId/rca/team', authenticate, validate(addRcaTeamMemberSchema), addTeamMember);
 router.delete('/:reportId/rca/team/:memberId', authenticate, removeTeamMember);
+
+/**
+ * @swagger
+ * /reports/{reportId}/rca/persetujuan:
+ *   patch:
+ *     summary: Persetujuan RCA oleh Admin Utama
+ *     tags: [RCA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               keputusan:
+ *                 type: string
+ *                 enum: [setuju, revisi]
+ *               catatan:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Persetujuan berhasil
+ */
+router.patch(
+  '/:reportId/rca/persetujuan',
+  authenticate,
+  requireRole(['ADMIN_UTAMA']),
+  validate(persetujuanRcaSchema),
+  auditLog('PERSETUJUAN_RCA', 'RCA', (req) => req.params.reportId as string),
+  persetujuanRca,
+);
 
 export default router;
