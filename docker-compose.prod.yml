@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/nixzouxu/smart-rose-backend:latest
     env_file: .env.production
     ports:
       - "127.0.0.1:4000:4000"
