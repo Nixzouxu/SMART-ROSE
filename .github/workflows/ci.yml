@@ -43,11 +43,17 @@ jobs:
       DIRECT_URL: postgresql://smartrose:smartrosedev123@localhost:5433/smartrose_dev?schema=public
       REDIS_URL: redis://localhost:6379
       STORAGE_PROVIDER: local
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ci_test_minio_access_key
+      MINIO_SECRET_KEY: ci_test_minio_secret_key
+      MINIO_BUCKET: ci-test-bucket
       JWT_ACCESS_SECRET: ci_test_access_secret_not_for_production
       JWT_REFRESH_SECRET: ci_test_refresh_secret_not_for_production
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
-      ENCRYPTION_KEY: ci_test_encryption_key_32bytes12
+      ENCRYPTION_KEY: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
       SMTP_HOST: localhost
       SMTP_PORT: 1025
       SMTP_SECURE: "false"
