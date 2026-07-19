@@ -6,7 +6,7 @@
 // Pastikan file ini tidak diimport langsung oleh kode aplikasi.
 
 import dotenv from 'dotenv';
-dotenv.config({ path: '.env.development' });
+dotenv.config({ path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development' });
 import path from 'path';
 import { defineConfig } from 'prisma/config';
 
