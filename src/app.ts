@@ -42,7 +42,9 @@ export function createApp(): Application {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  }
 
   // Route modul lain di-mount di sini mulai Fase 2 dst
   app.use('/api/auth', authRoutes);
