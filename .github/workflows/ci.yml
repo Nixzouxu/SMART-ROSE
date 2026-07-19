@@ -93,6 +93,14 @@ jobs:
             sleep 3
           done
 
+      - name: Create MinIO bucket
+        run: |
+          docker run --rm --network host \
+            --entrypoint /bin/sh minio/mc -c "
+              mc alias set local http://localhost:9000 ci_test_minio_access_key ci_test_minio_secret_key &&
+              mc mb local/ci-test-bucket --ignore-existing
+            "
+
       - name: Install dependencies
         run: npm ci
 
