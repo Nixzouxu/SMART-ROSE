@@ -4,6 +4,7 @@
 
 import { db } from '@/config/db';
 import { logger } from '@/utils/logger';
+import { ApiError } from '@/utils/apiError';
 
 type TipeNotifikasi =
   | 'LAPORAN_BARU'
@@ -98,5 +99,39 @@ export const createAdminNotification = async (
     isRead: false,
     createdAt: new Date(),
     targetRoom: 'admins',
+  });
+};
+
+export const getUserNotifications = async (userId: string, page: number, limit: number) => {
+  const skip = (page - 1) * limit;
+
+  const [total, items] = await Promise.all([
+    db.notification.count({ where: { userId } }),
+    db.notification.findMany({
+      where: { userId },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+
+  return { items, total, page, limit };
+};
+
+export const markAsRead = async (userId: string, id: string) => {
+  const existing = await db.notification.findUnique({ where: { id } });
+  if (!existing) throw new ApiError(404, 'Notifikasi tidak ditemukan');
+  if (existing.userId !== userId) throw new ApiError(403, 'Akses ditolak');
+
+  return db.notification.update({
+    where: { id },
+    data: { isRead: true },
+  });
+};
+
+export const markAllAsRead = async (userId: string) => {
+  await db.notification.updateMany({
+    where: { userId, isRead: false },
+    data: { isRead: true },
   });
 };

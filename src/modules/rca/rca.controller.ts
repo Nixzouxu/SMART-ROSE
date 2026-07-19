@@ -146,3 +146,20 @@ export const removeTeamMember = async (req: AuthRequest, res: Response, next: Ne
     next(error);
   }
 };
+
+export const persetujuanRca = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    const { keputusan, catatan } = req.body;
+
+    const rca = await rcaService.persetujuanRca(reportId, keputusan, catatan);
+
+    res.status(200).json({
+      success: true,
+      message: 'Persetujuan RCA berhasil diproses',
+      data: rca,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

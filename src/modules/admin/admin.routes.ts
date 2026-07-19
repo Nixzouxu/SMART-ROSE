@@ -4,6 +4,7 @@ import { requireRole } from '@/middlewares/rbac.middleware';
 import * as userManagementController from './userManagement.controller';
 import * as reportsAdminController from './reportsAdmin.controller';
 import * as adminJobsController from './adminJobs.controller';
+import * as auditLogController from './auditLog.controller';
 import { validate } from '@/middlewares/validate.middleware';
 import {
   adminListReportsQuerySchema,
@@ -151,6 +152,38 @@ router.post(
   auditLog('REJECT_USER', 'User', (req) => req.params.id as string),
   userManagementController.rejectUser,
 );
+
+// --- Admin Audit Logs ---
+/**
+ * @openapi
+ * /admin/audit-logs:
+ *   get:
+ *     summary: List audit logs
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: targetId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of audit logs
+ */
+router.get('/audit-logs', auditLogController.getAuditLogs);
 
 // --- Admin Reports ---
 /**

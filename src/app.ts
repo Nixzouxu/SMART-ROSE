@@ -16,6 +16,8 @@ import chatbotPublicRouter from '@/modules/chatbot/chatbot.public.routes';
 import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
 import captchaRoutes from '@/modules/captcha/captcha.routes';
 import announcementRoutes from '@/modules/announcement/announcement.routes';
+import feedbackRoutes from '@/modules/feedback/feedback.routes';
+import notificationsRoutes from '@/modules/notifications/notifications.routes';
 
 import { globalRateLimit } from '@/middlewares/globalRateLimit.middleware';
 import { sanitizeMiddleware } from '@/middlewares/sanitize.middleware';
@@ -61,6 +63,8 @@ export function createApp(): Application {
   app.use('/api/admin', adminRoutes);
   app.use('/api/reports', reportsRoutes);
   app.use('/api/reports', rcaRoutes);
+  app.use('/api/reports', feedbackRoutes);
+  app.use('/api/notifications', notificationsRoutes);
 
   // Fase 5
   app.use('/api/guides', guidesRouter);
