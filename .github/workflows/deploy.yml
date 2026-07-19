@@ -13,6 +13,10 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
     steps:
+      - name: Set lowercase image name
+        id: image
+        run: echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/smart-rose-backend" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -25,7 +29,7 @@ jobs:
 
       - name: Set image tag
         id: meta
-        run: echo "image_tag=ghcr.io/${{ github.repository_owner }}/smart-rose-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
+        run: echo "image_tag=${{ steps.image.outputs.name }}:${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -34,8 +38,8 @@ jobs:
           file: ./Dockerfile.prod
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/smart-rose-backend:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/smart-rose-backend:latest
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
 
   deploy:
     needs: build-and-push
