@@ -1,5 +1,7 @@
-import { db as prisma } from '../src/config/db';
-
+import fs from 'fs';
+import path from 'path';
+const isDev = fs.existsSync(path.join(__dirname, '../src/config/db.ts'));
+const { db: prisma } = isDev ? require('../src/config/db') : require('../dist/config/db');
 const chatbotData = [
   // Kategori 1 — Definisi & Klasifikasi Insiden
   {
