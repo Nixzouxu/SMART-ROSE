@@ -5,7 +5,7 @@ import { rcaService } from './rca.service';
 import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
 import { exportRcaToExcel, exportRcaToPdf } from '@/modules/reports/export.service';
-import { generateRcaSimplePdf } from './rca-export.service';
+import { generateRcaSimplePdf, generateRcaLengkapPdf } from './rca-export.service';
 
 const checkAuthorization = async (reportId: string, user: TokenPayload) => {
   if (user.role === 'ADMIN_UTAMA' || user.role === 'ADMIN') {
@@ -170,10 +170,17 @@ export const exportRca = async (req: AuthRequest, res: Response, next: NextFunct
         where: { reportId },
         select: { jenisInvestigasi: true },
       });
-      const buffer =
-        rcaMeta?.jenisInvestigasi === 'SEDERHANA'
-          ? await generateRcaSimplePdf(reportId)
-          : await exportRcaToPdf(reportId);
+      let buffer: Buffer;
+      if (rcaMeta?.jenisInvestigasi === 'SEDERHANA') {
+        buffer = await generateRcaSimplePdf(reportId);
+      } else if (rcaMeta?.jenisInvestigasi === 'RCA_LENGKAP') {
+        buffer = await generateRcaLengkapPdf(reportId);
+      } else {
+        throw new ApiError(
+          400,
+          'Jenis investigasi RCA tidak dikenali atau RCA belum diselesaikan strukturnya',
+        );
+      }
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="rca-${reportId}.pdf"`);
       res.setHeader('Content-Length', buffer.length);
