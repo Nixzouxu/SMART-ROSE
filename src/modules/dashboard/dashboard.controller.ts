@@ -84,7 +84,8 @@ export const getByUnitKerja = async (req: AuthRequest, res: Response, next: Next
 
 export const getTrend = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const data = await dashboardService.getTrend();
+    const { startDate, endDate } = parseDateFilter(req);
+    const data = await dashboardService.getTrend(startDate, endDate);
     res.status(200).json({
       success: true,
       message: 'Data tren laporan berhasil diambil',
@@ -111,7 +112,8 @@ export const exportDashboard = async (req: AuthRequest, res: Response, next: Nex
       data.grafikJenisInsiden = await dashboardService.getByJenisInsiden(startDate, endDate);
     if (cakupan.includes('grafikGrading'))
       data.grafikGrading = await dashboardService.getByGradingRisiko(startDate, endDate);
-    if (cakupan.includes('trenBulanan')) data.trenBulanan = await dashboardService.getTrend();
+    if (cakupan.includes('trenBulanan'))
+      data.trenBulanan = await dashboardService.getTrend(startDate, endDate);
 
     if (format === 'excel') {
       const buffer = await generateDashboardExcel(data, cakupan);

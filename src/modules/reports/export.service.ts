@@ -627,9 +627,12 @@ export const generateDashboardExcel = async (
 
   if (cakupan.includes('ringkasanStatistik') && data.ringkasanStatistik) {
     sheet.addRow(['Ringkasan Statistik']).font = { bold: true };
-    sheet.addRow(['Total Laporan', data.ringkasanStatistik.totalLaporan]);
-    sheet.addRow(['Laporan Selesai', data.ringkasanStatistik.totalSelesai]);
-    sheet.addRow(['Laporan Overdue', data.ringkasanStatistik.totalOverdue]);
+    sheet.addRow(['Total Laporan', data.ringkasanStatistik.total]);
+
+    const selesai =
+      data.ringkasanStatistik.byStatus?.find((s: any) => s.status === 'SELESAI')?.count || 0;
+    sheet.addRow(['Laporan Selesai', selesai]);
+    sheet.addRow(['Laporan Overdue', data.ringkasanStatistik.overdue]);
     sheet.addRow([]);
   }
 
@@ -637,7 +640,7 @@ export const generateDashboardExcel = async (
     sheet.addRow(['Grafik Jenis Insiden']).font = { bold: true };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data.grafikJenisInsiden.forEach((item: any) => {
-      sheet.addRow([item.jenisInsiden, item._count]);
+      sheet.addRow([item.jenisInsiden, item.count]);
     });
     sheet.addRow([]);
   }
@@ -646,7 +649,7 @@ export const generateDashboardExcel = async (
     sheet.addRow(['Grafik Grading']).font = { bold: true };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data.grafikGrading.forEach((item: any) => {
-      sheet.addRow([item.gradingFinal || item.gradingAwal, item._count]);
+      sheet.addRow([item.grading, item.count]);
     });
     sheet.addRow([]);
   }
@@ -655,7 +658,7 @@ export const generateDashboardExcel = async (
     sheet.addRow(['Tren Bulanan']).font = { bold: true };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data.trenBulanan.forEach((item: any) => {
-      sheet.addRow([item.bulan, item.jumlah]);
+      sheet.addRow([item.bulan, item.count]);
     });
   }
 
@@ -680,9 +683,12 @@ export const generateDashboardPdf = async (
     if (cakupan.includes('ringkasanStatistik') && data.ringkasanStatistik) {
       doc.font('Helvetica-Bold').fontSize(12).text('Ringkasan Statistik');
       doc.font('Helvetica').fontSize(10);
-      doc.text(`Total Laporan: ${data.ringkasanStatistik.totalLaporan}`);
-      doc.text(`Laporan Selesai: ${data.ringkasanStatistik.totalSelesai}`);
-      doc.text(`Laporan Overdue: ${data.ringkasanStatistik.totalOverdue}`);
+      doc.text(`Total Laporan: ${data.ringkasanStatistik.total}`);
+
+      const selesai =
+        data.ringkasanStatistik.byStatus?.find((s: any) => s.status === 'SELESAI')?.count || 0;
+      doc.text(`Laporan Selesai: ${selesai}`);
+      doc.text(`Laporan Overdue: ${data.ringkasanStatistik.overdue}`);
       doc.moveDown(1.5);
     }
 
@@ -691,7 +697,7 @@ export const generateDashboardPdf = async (
       doc.font('Helvetica').fontSize(10);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data.grafikJenisInsiden.forEach((item: any) => {
-        doc.text(`${item.jenisInsiden}: ${item._count}`);
+        doc.text(`${item.jenisInsiden}: ${item.count}`);
       });
       doc.moveDown(1.5);
     }
@@ -701,7 +707,7 @@ export const generateDashboardPdf = async (
       doc.font('Helvetica').fontSize(10);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data.grafikGrading.forEach((item: any) => {
-        doc.text(`${item.gradingFinal || item.gradingAwal}: ${item._count}`);
+        doc.text(`${item.grading}: ${item.count}`);
       });
       doc.moveDown(1.5);
     }
@@ -711,7 +717,7 @@ export const generateDashboardPdf = async (
       doc.font('Helvetica').fontSize(10);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data.trenBulanan.forEach((item: any) => {
-        doc.text(`${item.bulan}: ${item.jumlah}`);
+        doc.text(`${item.bulan}: ${item.count}`);
       });
     }
 

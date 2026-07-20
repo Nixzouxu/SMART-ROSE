@@ -149,23 +149,24 @@ describe('E2E Report & RCA Flow Integration Test', () => {
           kronologiSingkat: 'Test RCA E2E',
           masalahAwal5Why: 'Pasien terpeleset',
           jenisPengisian: 'TEMPLATE',
-          tindakanBands: 'EKSTRIM (Merah)',
+          tindakanBands: 'MERAH',
         });
 
       expect(res.status).toBe(201);
     });
 
     it('RCA Kompleks: Menambahkan Anggota Tim Investigator', async () => {
+      const adminUser = await db.user.findFirst({ where: { email: 'admin_test_e2e@rs.com' } });
       const res = await request(app)
         .post(`/api/reports/${reportId}/rca/team`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          nama: 'Ketua Tim Test',
+          userId: adminUser?.id,
           peran: 'KETUA',
         });
 
       expect(res.status).toBe(201);
-      expect(res.body.data.nama).toBe('Ketua Tim Test');
+      expect(res.body.data.userId).toBe(adminUser?.id);
     });
 
     it('RCA Kompleks: Mengisi 6 Sub-tabel sekaligus', async () => {
@@ -179,7 +180,7 @@ describe('E2E Report & RCA Flow Integration Test', () => {
           kronologiSingkat: 'Test RCA E2E Updated',
           masalahAwal5Why: 'Pasien terpeleset v2',
           jenisPengisian: 'TEMPLATE',
-          tindakanBands: 'TINGGI (Kuning)',
+          tindakanBands: 'KUNING',
           timelineEntries: [
             {
               waktu: new Date().toISOString(),

@@ -20,9 +20,6 @@ export class RcaService {
       data: {
         reportId,
         disusunOlehId,
-        timKetuaLegacyText: payload.timKetuaLegacyText,
-        timSekretarisLegacyText: payload.timSekretarisLegacyText,
-        timAnggotaLegacyText: payload.timAnggotaLegacyText,
         observasi: payload.observasi,
         dokumentasi: payload.dokumentasi,
         kronologiSingkat: payload.kronologiSingkat,
@@ -123,9 +120,6 @@ export class RcaService {
       return tx.rootCauseAnalysis.update({
         where: { id: existing.id },
         data: {
-          timKetuaLegacyText: payload.timKetuaLegacyText,
-          timSekretarisLegacyText: payload.timSekretarisLegacyText,
-          timAnggotaLegacyText: payload.timAnggotaLegacyText,
           observasi: payload.observasi,
           dokumentasi: payload.dokumentasi,
           kronologiSingkat: payload.kronologiSingkat,
@@ -204,6 +198,18 @@ export class RcaService {
     return true;
   }
 
+  async getTeamMembers(reportId: string) {
+    const existing = await prisma.rootCauseAnalysis.findUnique({
+      where: { reportId },
+    });
+    if (!existing) {
+      throw new ApiError(404, 'RCA tidak ditemukan');
+    }
+    return prisma.rcaTeamMember.findMany({
+      where: { rcaId: existing.id },
+    });
+  }
+
   async addTeamMember(reportId: string, payload: RcaTeamMemberInput) {
     const existing = await prisma.rootCauseAnalysis.findUnique({
       where: { reportId },
@@ -211,10 +217,70 @@ export class RcaService {
     if (!existing) {
       throw new ApiError(404, 'RCA tidak ditemukan');
     }
+
+    // Validate user exists and has admin role
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    if (!user) throw new ApiError(404, 'User tidak ditemukan');
+    if (user.role !== 'ADMIN' && user.role !== 'ADMIN_UTAMA') {
+      throw new ApiError(400, 'Hanya ADMIN atau ADMIN_UTAMA yang dapat menjadi tim RCA');
+    }
+
+    if (payload.peran === 'KETUA' || payload.peran === 'SEKRETARIS') {
+      const existingRole = await prisma.rcaTeamMember.findFirst({
+        where: { rcaId: existing.id, peran: payload.peran },
+      });
+      if (existingRole) {
+        return prisma.rcaTeamMember.update({
+          where: { id: existingRole.id },
+          data: { userId: payload.userId },
+        });
+      }
+    }
+
     return prisma.rcaTeamMember.create({
       data: {
         rcaId: existing.id,
-        nama: payload.nama,
+        userId: payload.userId,
+        peran: payload.peran,
+      },
+    });
+  }
+
+  async updateTeamMember(reportId: string, memberId: string, payload: Partial<RcaTeamMemberInput>) {
+    const existing = await prisma.rootCauseAnalysis.findUnique({
+      where: { reportId },
+    });
+    if (!existing) {
+      throw new ApiError(404, 'RCA tidak ditemukan');
+    }
+
+    const member = await prisma.rcaTeamMember.findUnique({ where: { id: memberId } });
+    if (!member || member.rcaId !== existing.id) {
+      throw new ApiError(404, 'Anggota tim tidak ditemukan');
+    }
+
+    if (payload.userId) {
+      const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+      if (!user) throw new ApiError(404, 'User tidak ditemukan');
+      if (user.role !== 'ADMIN' && user.role !== 'ADMIN_UTAMA') {
+        throw new ApiError(400, 'Hanya ADMIN atau ADMIN_UTAMA yang dapat menjadi tim RCA');
+      }
+    }
+
+    const targetPeran = payload.peran || member.peran;
+    if (targetPeran === 'KETUA' || targetPeran === 'SEKRETARIS') {
+      const existingRole = await prisma.rcaTeamMember.findFirst({
+        where: { rcaId: existing.id, peran: targetPeran, id: { not: memberId } },
+      });
+      if (existingRole) {
+        throw new ApiError(400, `Sudah ada ${targetPeran} aktif untuk RCA ini`);
+      }
+    }
+
+    return prisma.rcaTeamMember.update({
+      where: { id: memberId },
+      data: {
+        userId: payload.userId,
         peran: payload.peran,
       },
     });

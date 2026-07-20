@@ -10,7 +10,7 @@ import authRoutes from '@/modules/auth/auth.routes';
 import adminRoutes from '@/modules/admin/admin.routes';
 import reportsRoutes from '@/modules/reports/reports.routes';
 import { guidesRouter, guidesAdminRouter } from '@/modules/education/guides.routes';
-import rcaRoutes from '@/modules/rca/rca.routes';
+import rcaRoutes, { rcaGlobalRouter } from '@/modules/rca/rca.routes';
 import { chatbotRouter, chatbotAdminRouter } from '@/modules/chatbot/chatbot.routes';
 import chatbotPublicRouter from '@/modules/chatbot/chatbot.public.routes';
 import dashboardRoutes from '@/modules/dashboard/dashboard.routes';
@@ -42,6 +42,7 @@ export function createApp(): Application {
         }
       },
       credentials: true,
+      // develop: multi-origin CORS support (54cbebf), maxAge dihapus sesuai versi develop
     }),
   );
   app.use(globalRateLimit);
@@ -63,6 +64,7 @@ export function createApp(): Application {
   app.use('/api/admin', adminRoutes);
   app.use('/api/reports', reportsRoutes);
   app.use('/api/reports', rcaRoutes);
+  app.use('/api/rca', rcaGlobalRouter); // feat/rca-simple-export: endpoint global /rca/:id/bands-options
   app.use('/api/reports', feedbackRoutes);
   app.use('/api/notifications', notificationsRoutes);
 

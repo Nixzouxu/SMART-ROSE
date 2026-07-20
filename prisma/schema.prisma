@@ -177,6 +177,7 @@ model User {
   rcaDisusun      RootCauseAnalysis[] @relation("RcaDisusunOleh")
   feedbacks       Feedback[]
   trustedDevices  TrustedDevice[]
+  rcaTeamMembers  RcaTeamMember[]
 
   @@index([email])
   @@index([noPegawai])
@@ -341,6 +342,7 @@ model RootCauseAnalysis {
   dokumentasi         String?         @db.Text
   kronologiSingkat    String          @map("kronologi_singkat") @db.Text
   tipeSubInsiden      String?         @map("tipe_sub_insiden")
+  penyebabLangsung    String?         @map("penyebab_langsung") @db.Text
   tindakanSesuaiBands String?         @map("tindakan_sesuai_bands") @db.Text
   tindakanBands       String?         @map("tindakan_bands")
   daftarInterviewee   String[]        @map("daftar_interviewee")
@@ -370,16 +372,19 @@ model RootCauseAnalysis {
 }
 
 model RcaTeamMember {
-  id        String   @id @default(uuid())
-  rcaId     String   @map("rca_id")
-  nama      String
-  peran     PeranTim
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  rcaId          String   @map("rca_id")
+  userId         String?  @map("user_id")
+  namaLegacyText String?  @map("nama_legacy_text")
+  peran          PeranTim
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+  rca  RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+  user User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([rcaId])
+  @@index([userId])
   @@map("rca_team_members")
 }
 
@@ -493,22 +498,6 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-model Feedback {
-  id          String        @id @default(uuid())
-  reportId    String        @map("report_id")
-  dariAdminId String        @map("dari_admin_id")
-  catatan     String        @db.Text
-  jenis       JenisFeedback
-  createdAt   DateTime      @default(now()) @map("created_at")
-
-  report      Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  dariAdmin   User          @relation(fields: [dariAdminId], references: [id])
-
-  @@index([reportId])
-  @@index([dariAdminId])
-  @@map("feedbacks")
-}
-
 model TrustedDevice {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
@@ -523,4 +512,20 @@ model TrustedDevice {
   @@index([deviceToken])
   @@index([userId])
   @@map("trusted_devices")
+}
+
+model Feedback {
+  id          String        @id @default(uuid())
+  reportId    String        @map("report_id")
+  dariAdminId String        @map("dari_admin_id")
+  catatan     String        @db.Text
+  jenis       JenisFeedback
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  report      Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  dariAdmin   User          @relation(fields: [dariAdminId], references: [id])
+
+  @@index([reportId])
+  @@index([dariAdminId])
+  @@map("feedbacks")
 }
