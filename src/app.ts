@@ -42,7 +42,7 @@ export function createApp(): Application {
         }
       },
       credentials: true,
-      maxAge: 3600, // Cache preflight response selama 1 jam untuk mengurangi latency
+      // develop: multi-origin CORS support (54cbebf), maxAge dihapus sesuai versi develop
     }),
   );
   app.use(globalRateLimit);
@@ -64,7 +64,7 @@ export function createApp(): Application {
   app.use('/api/admin', adminRoutes);
   app.use('/api/reports', reportsRoutes);
   app.use('/api/reports', rcaRoutes);
-  app.use('/api/rca', rcaGlobalRouter);
+  app.use('/api/rca', rcaGlobalRouter); // feat/rca-simple-export: endpoint global /rca/:id/bands-options
   app.use('/api/reports', feedbackRoutes);
   app.use('/api/notifications', notificationsRoutes);
 

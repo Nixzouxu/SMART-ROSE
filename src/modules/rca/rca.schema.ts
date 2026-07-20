@@ -48,13 +48,15 @@ export const rcaRencanaPerbaikanSchema = z.object({
 
 export const createUpdateRcaSchema = z.object({
   body: z.object({
+    timKetua: z.string().optional(),
+    timSekretaris: z.string().optional(),
+    timAnggota: z.array(z.string()).default([]),
     observasi: z.string().optional(),
     dokumentasi: z.string().optional(),
     kronologiSingkat: z.string().min(1, 'Kronologi singkat harus diisi'),
     tipeSubInsiden: z.string().optional(),
     tindakanSesuaiBands: z.string().optional(),
     tindakanBands: z.nativeEnum(GradingRisiko).optional(),
-    penyebabLangsung: z.string().optional(),
     jenisPengisian: z.nativeEnum(JenisPengisian).optional(),
     jenisInvestigasi: z.nativeEnum(JenisInvestigasi).optional(),
     daftarInterviewee: z.array(z.string()).default([]),
@@ -73,16 +75,17 @@ export const createUpdateRcaSchema = z.object({
   }),
 });
 
+// develop: addTeamMember menggunakan {nama, peran} (string nama langsung, bukan userId FK)
 export const addRcaTeamMemberSchema = z.object({
   body: z.object({
-    userId: z.string().min(1, 'User ID wajib diisi').uuid('Format User ID tidak valid'),
+    nama: z.string().min(1, 'Nama harus diisi'),
     peran: z.nativeEnum(PeranTim),
   }),
 });
 
 export const updateRcaTeamMemberSchema = z.object({
   body: z.object({
-    userId: z.string().uuid('Format User ID tidak valid').optional(),
+    nama: z.string().min(1, 'Nama harus diisi').optional(),
     peran: z.nativeEnum(PeranTim).optional(),
   }),
 });

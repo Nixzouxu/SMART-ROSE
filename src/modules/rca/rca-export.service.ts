@@ -41,7 +41,6 @@ const fetchSimpleRcaData = async (reportId: string) => {
       rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
       teamMembers: {
         where: { peran: PeranTim.KETUA },
-        include: { user: { select: { nama: true } } },
         take: 1,
       },
     },
@@ -52,8 +51,7 @@ const fetchSimpleRcaData = async (reportId: string) => {
   }
 
   const ketuaMember = rca.teamMembers[0];
-  const namaKetua =
-    ketuaMember?.user?.nama ?? ketuaMember?.namaLegacyText ?? rca.timKetuaLegacyText ?? '-';
+  const namaKetua = ketuaMember?.nama ?? rca.timKetua ?? '-';
 
   const tanggalSelesai =
     rca.status === StatusRca.FINAL || rca.status === StatusRca.DISETUJUI ? rca.updatedAt : null;
@@ -474,9 +472,7 @@ export const fetchLengkapRcaData = async (reportId: string) => {
   const rca = await prisma.rootCauseAnalysis.findUnique({
     where: { reportId },
     include: {
-      teamMembers: {
-        include: { user: { select: { nama: true } } },
-      },
+      teamMembers: true,
       fiveWhyEntries: { orderBy: { urutan: 'asc' } },
       fishboneEntries: { orderBy: { urutan: 'asc' } },
       timelineEntries: { orderBy: { urutan: 'asc' } },
@@ -642,7 +638,7 @@ export const generateRcaLengkapPdf = async (reportId: string): Promise<Buffer> =
     const getTeam = (role: PeranTim) =>
       rca.teamMembers
         .filter((m) => m.peran === role)
-        .map((m) => m.user?.nama || m.namaLegacyText)
+        .map((m) => m.nama)
         .join(', ') || '-';
 
     labelBox('Ketua Tim Investigasi', getTeam(PeranTim.KETUA));

@@ -92,7 +92,7 @@ export class RcaService {
         fiveWhyEntries: { orderBy: { urutan: 'asc' } },
         fishboneEntries: { orderBy: { urutan: 'asc' } },
         rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
-        teamMembers: { include: { user: { select: { id: true, nama: true, role: true } } } },
+        teamMembers: true,
       },
     });
 
@@ -178,7 +178,7 @@ export class RcaService {
           fiveWhyEntries: { orderBy: { urutan: 'asc' } },
           fishboneEntries: { orderBy: { urutan: 'asc' } },
           rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
-          teamMembers: { include: { user: { select: { id: true, nama: true, role: true } } } },
+          teamMembers: true,
         },
       });
     });
@@ -207,9 +207,6 @@ export class RcaService {
     }
     return prisma.rcaTeamMember.findMany({
       where: { rcaId: existing.id },
-      include: {
-        user: { select: { id: true, nama: true, role: true } },
-      },
     });
   }
 
@@ -221,13 +218,6 @@ export class RcaService {
       throw new ApiError(404, 'RCA tidak ditemukan');
     }
 
-    // Validate user
-    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-    if (!user) throw new ApiError(404, 'User tidak ditemukan');
-    if (user.role !== 'ADMIN' && user.role !== 'ADMIN_UTAMA') {
-      throw new ApiError(400, 'Hanya ADMIN atau ADMIN_UTAMA yang dapat menjadi tim RCA');
-    }
-
     if (payload.peran === 'KETUA' || payload.peran === 'SEKRETARIS') {
       const existingRole = await prisma.rcaTeamMember.findFirst({
         where: { rcaId: existing.id, peran: payload.peran },
@@ -235,7 +225,7 @@ export class RcaService {
       if (existingRole) {
         return prisma.rcaTeamMember.update({
           where: { id: existingRole.id },
-          data: { userId: payload.userId },
+          data: { nama: payload.nama },
         });
       }
     }
@@ -243,7 +233,7 @@ export class RcaService {
     return prisma.rcaTeamMember.create({
       data: {
         rcaId: existing.id,
-        userId: payload.userId,
+        nama: payload.nama,
         peran: payload.peran,
       },
     });
@@ -262,14 +252,6 @@ export class RcaService {
       throw new ApiError(404, 'Anggota tim tidak ditemukan');
     }
 
-    if (payload.userId) {
-      const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-      if (!user) throw new ApiError(404, 'User tidak ditemukan');
-      if (user.role !== 'ADMIN' && user.role !== 'ADMIN_UTAMA') {
-        throw new ApiError(400, 'Hanya ADMIN atau ADMIN_UTAMA yang dapat menjadi tim RCA');
-      }
-    }
-
     const targetPeran = payload.peran || member.peran;
     if (targetPeran === 'KETUA' || targetPeran === 'SEKRETARIS') {
       const existingRole = await prisma.rcaTeamMember.findFirst({
@@ -283,7 +265,7 @@ export class RcaService {
     return prisma.rcaTeamMember.update({
       where: { id: memberId },
       data: {
-        userId: payload.userId,
+        nama: payload.nama,
         peran: payload.peran,
       },
     });
