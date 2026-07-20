@@ -54,6 +54,7 @@ export const createUpdateRcaSchema = z.object({
     tipeSubInsiden: z.string().optional(),
     tindakanSesuaiBands: z.string().optional(),
     tindakanBands: z.nativeEnum(GradingRisiko).optional(),
+    penyebabLangsung: z.string().optional(),
     jenisPengisian: z.nativeEnum(JenisPengisian).optional(),
     jenisInvestigasi: z.nativeEnum(JenisInvestigasi).optional(),
     daftarInterviewee: z.array(z.string()).default([]),

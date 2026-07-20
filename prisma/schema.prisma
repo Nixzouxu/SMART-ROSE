@@ -342,6 +342,7 @@ model RootCauseAnalysis {
   dokumentasi             String?          @db.Text
   kronologiSingkat        String           @map("kronologi_singkat") @db.Text
   tipeSubInsiden          String?          @map("tipe_sub_insiden")
+  penyebabLangsung        String?          @map("penyebab_langsung") @db.Text
   tindakanSesuaiBands     String?          @map("tindakan_sesuai_bands") @db.Text
   tindakanBands           GradingRisiko?   @map("tindakan_bands")
   daftarInterviewee       String[]         @map("daftar_interviewee")

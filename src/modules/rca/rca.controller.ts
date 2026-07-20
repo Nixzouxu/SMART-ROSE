@@ -5,6 +5,7 @@ import { rcaService } from './rca.service';
 import { db as prisma } from '@/config/db';
 import { ApiError } from '@/utils/apiError';
 import { exportRcaToExcel, exportRcaToPdf } from '@/modules/reports/export.service';
+import { generateRcaSimplePdf } from './rca-export.service';
 
 const checkAuthorization = async (reportId: string, user: TokenPayload) => {
   if (user.role === 'ADMIN_UTAMA' || user.role === 'ADMIN') {
@@ -164,7 +165,15 @@ export const exportRca = async (req: AuthRequest, res: Response, next: NextFunct
       res.setHeader('Content-Length', buffer.length);
       res.status(200).send(buffer);
     } else {
-      const buffer = await exportRcaToPdf(reportId);
+      // Pilih generator PDF sesuai jenis investigasi
+      const rcaMeta = await prisma.rootCauseAnalysis.findUnique({
+        where: { reportId },
+        select: { jenisInvestigasi: true },
+      });
+      const buffer =
+        rcaMeta?.jenisInvestigasi === 'SEDERHANA'
+          ? await generateRcaSimplePdf(reportId)
+          : await exportRcaToPdf(reportId);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="rca-${reportId}.pdf"`);
       res.setHeader('Content-Length', buffer.length);
