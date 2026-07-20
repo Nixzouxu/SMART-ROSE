@@ -75,17 +75,16 @@ export const createUpdateRcaSchema = z.object({
   }),
 });
 
-// develop: addTeamMember menggunakan {nama, peran} (string nama langsung, bukan userId FK)
 export const addRcaTeamMemberSchema = z.object({
   body: z.object({
-    nama: z.string().min(1, 'Nama harus diisi'),
+    userId: z.string().uuid('Format User ID tidak valid'),
     peran: z.nativeEnum(PeranTim),
   }),
 });
 
 export const updateRcaTeamMemberSchema = z.object({
   body: z.object({
-    nama: z.string().min(1, 'Nama harus diisi').optional(),
+    userId: z.string().uuid('Format User ID tidak valid').optional(),
     peran: z.nativeEnum(PeranTim).optional(),
   }),
 });

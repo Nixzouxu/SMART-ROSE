@@ -42,6 +42,7 @@ const fetchSimpleRcaData = async (reportId: string) => {
       teamMembers: {
         where: { peran: PeranTim.KETUA },
         take: 1,
+        include: { user: true },
       },
     },
   });
@@ -51,7 +52,7 @@ const fetchSimpleRcaData = async (reportId: string) => {
   }
 
   const ketuaMember = rca.teamMembers[0];
-  const namaKetua = ketuaMember?.nama ?? rca.timKetua ?? '-';
+  const namaKetua = ketuaMember?.user?.nama ?? ketuaMember?.namaLegacyText ?? rca.timKetua ?? '-';
 
   const tanggalSelesai =
     rca.status === StatusRca.FINAL || rca.status === StatusRca.DISETUJUI ? rca.updatedAt : null;
@@ -472,7 +473,7 @@ export const fetchLengkapRcaData = async (reportId: string) => {
   const rca = await prisma.rootCauseAnalysis.findUnique({
     where: { reportId },
     include: {
-      teamMembers: true,
+      teamMembers: { include: { user: true } },
       fiveWhyEntries: { orderBy: { urutan: 'asc' } },
       fishboneEntries: { orderBy: { urutan: 'asc' } },
       timelineEntries: { orderBy: { urutan: 'asc' } },
@@ -638,7 +639,7 @@ export const generateRcaLengkapPdf = async (reportId: string): Promise<Buffer> =
     const getTeam = (role: PeranTim) =>
       rca.teamMembers
         .filter((m) => m.peran === role)
-        .map((m) => m.nama)
+        .map((m) => m.user?.nama ?? m.namaLegacyText ?? '-')
         .join(', ') || '-';
 
     labelBox('Ketua Tim Investigasi', getTeam(PeranTim.KETUA));

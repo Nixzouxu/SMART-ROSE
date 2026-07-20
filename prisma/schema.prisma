@@ -177,6 +177,7 @@ model User {
   rcaDisusun      RootCauseAnalysis[] @relation("RcaDisusunOleh")
   feedbacks       Feedback[]
   trustedDevices  TrustedDevice[]
+  rcaTeamMembers  RcaTeamMember[]
 
   @@index([email])
   @@index([noPegawai])
@@ -371,16 +372,19 @@ model RootCauseAnalysis {
 }
 
 model RcaTeamMember {
-  id        String   @id @default(uuid())
-  rcaId     String   @map("rca_id")
-  nama      String
-  peran     PeranTim
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  rcaId          String   @map("rca_id")
+  userId         String?  @map("user_id")
+  namaLegacyText String?  @map("nama_legacy_text")
+  peran          PeranTim
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  rca RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+  rca  RootCauseAnalysis @relation(fields: [rcaId], references: [id], onDelete: Cascade)
+  user User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([rcaId])
+  @@index([userId])
   @@map("rca_team_members")
 }
 

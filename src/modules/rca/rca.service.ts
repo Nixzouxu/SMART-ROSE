@@ -218,6 +218,13 @@ export class RcaService {
       throw new ApiError(404, 'RCA tidak ditemukan');
     }
 
+    // Validate user exists and has admin role
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    if (!user) throw new ApiError(404, 'User tidak ditemukan');
+    if (user.role !== 'ADMIN' && user.role !== 'ADMIN_UTAMA') {
+      throw new ApiError(400, 'Hanya ADMIN atau ADMIN_UTAMA yang dapat menjadi tim RCA');
+    }
+
     if (payload.peran === 'KETUA' || payload.peran === 'SEKRETARIS') {
       const existingRole = await prisma.rcaTeamMember.findFirst({
         where: { rcaId: existing.id, peran: payload.peran },
@@ -225,7 +232,7 @@ export class RcaService {
       if (existingRole) {
         return prisma.rcaTeamMember.update({
           where: { id: existingRole.id },
-          data: { nama: payload.nama },
+          data: { userId: payload.userId },
         });
       }
     }
@@ -233,7 +240,7 @@ export class RcaService {
     return prisma.rcaTeamMember.create({
       data: {
         rcaId: existing.id,
-        nama: payload.nama,
+        userId: payload.userId,
         peran: payload.peran,
       },
     });
@@ -252,6 +259,14 @@ export class RcaService {
       throw new ApiError(404, 'Anggota tim tidak ditemukan');
     }
 
+    if (payload.userId) {
+      const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+      if (!user) throw new ApiError(404, 'User tidak ditemukan');
+      if (user.role !== 'ADMIN' && user.role !== 'ADMIN_UTAMA') {
+        throw new ApiError(400, 'Hanya ADMIN atau ADMIN_UTAMA yang dapat menjadi tim RCA');
+      }
+    }
+
     const targetPeran = payload.peran || member.peran;
     if (targetPeran === 'KETUA' || targetPeran === 'SEKRETARIS') {
       const existingRole = await prisma.rcaTeamMember.findFirst({
@@ -265,7 +280,7 @@ export class RcaService {
     return prisma.rcaTeamMember.update({
       where: { id: memberId },
       data: {
-        nama: payload.nama,
+        userId: payload.userId,
         peran: payload.peran,
       },
     });
