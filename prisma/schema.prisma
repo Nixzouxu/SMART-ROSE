@@ -175,6 +175,7 @@ model User {
   assignedReports Report[]            @relation("AssignedAdmin")
   rcaDisusun      RootCauseAnalysis[] @relation("RcaDisusunOleh")
   feedbacks       Feedback[]
+  trustedDevices  TrustedDevice[]
 
   @@index([email])
   @@index([noPegawai])
@@ -505,4 +506,20 @@ model Feedback {
   @@index([reportId])
   @@index([dariAdminId])
   @@map("feedbacks")
+}
+
+model TrustedDevice {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceToken String   @unique @map("device_token")
+  userAgent   String?  @map("user_agent")
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+  lastUsedAt  DateTime @default(now()) @map("last_used_at")
+
+  @@index([deviceToken])
+  @@index([userId])
+  @@map("trusted_devices")
 }

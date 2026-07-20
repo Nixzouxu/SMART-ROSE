@@ -20,7 +20,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { identifier, password } = req.body;
-    const result = await authService.loginStepOne(identifier, password);
+    const deviceToken = req.cookies?.device_token;
+    const result = await authService.loginStepOne(identifier, password, deviceToken);
 
     if (result.requiresOtp) {
       res.status(200).json({
@@ -55,9 +56,21 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 export const verifyLoginOtp = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, otp } = req.body;
-    const result = await authService.loginStepTwoOtp(email, otp);
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = req.ip;
+    const result = await authService.loginStepTwoOtp(email, otp, userAgent, ipAddress);
 
     setRefreshTokenCookie(res, result.refreshToken);
+
+    if (result.deviceToken) {
+      res.cookie('device_token', result.deviceToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari dalam ms
+        path: '/',
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -105,12 +118,14 @@ export const logout = async (req: AuthRequest, res: Response, next: NextFunction
   try {
     const userId = req.user!.userId;
     const token = req.cookies?.refreshToken;
+    const deviceToken = req.cookies?.device_token;
 
     if (token) {
-      await authService.logoutUser(userId, token);
+      await authService.logoutUser(userId, token, deviceToken);
     }
 
     res.clearCookie('refreshToken');
+    res.clearCookie('device_token');
     res.status(200).json({
       success: true,
       message: 'Berhasil logout',

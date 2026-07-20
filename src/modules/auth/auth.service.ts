@@ -4,6 +4,8 @@ import { hashPassword, comparePassword } from '@/utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/utils/token';
 import { generateAndSendOtp, verifyOtp } from './otp.service';
 import redis from '@/config/redis';
+import { logger } from '@/utils/logger';
+import crypto from 'crypto';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const registerUser = async (data: any) => {
@@ -46,7 +48,7 @@ export const registerUser = async (data: any) => {
   return user;
 };
 
-export const loginStepOne = async (identifier: string, password: string) => {
+export const loginStepOne = async (identifier: string, password: string, deviceToken?: string) => {
   const user = await db.user.findFirst({
     where: {
       OR: [{ email: identifier }, { noPegawai: identifier }],
@@ -67,6 +69,31 @@ export const loginStepOne = async (identifier: string, password: string) => {
   }
 
   if (user.role === 'ADMIN' || user.role === 'ADMIN_UTAMA') {
+    if (deviceToken) {
+      try {
+        const hashedDeviceToken = crypto.createHash('sha256').update(deviceToken).digest('hex');
+        const validDevice = await db.trustedDevice.findUnique({
+          where: { deviceToken: hashedDeviceToken },
+        });
+
+        if (validDevice && validDevice.userId === user.id && validDevice.expiresAt > new Date()) {
+          await db.trustedDevice.update({
+            where: { id: validDevice.id },
+            data: { lastUsedAt: new Date() },
+          });
+
+          logger.info({
+            userId: user.id,
+            email: user.email,
+            msg: 'Login via trusted device, OTP skipped',
+          });
+          return await issueTokens(user.id, user.role);
+        }
+      } catch (error) {
+        logger.error({ userId: user.id, error }, 'Error validating trusted device');
+      }
+    }
+
     await generateAndSendOtp(user.email);
     return {
       requiresOtp: true,
@@ -78,7 +105,12 @@ export const loginStepOne = async (identifier: string, password: string) => {
   return await issueTokens(user.id, user.role);
 };
 
-export const loginStepTwoOtp = async (email: string, otp: string) => {
+export const loginStepTwoOtp = async (
+  email: string,
+  otp: string,
+  userAgent?: string,
+  ipAddress?: string,
+) => {
   const user = await db.user.findUnique({
     where: { email },
   });
@@ -93,7 +125,36 @@ export const loginStepTwoOtp = async (email: string, otp: string) => {
 
   await verifyOtp(email, otp);
 
-  return await issueTokens(user.id, user.role);
+  let newDeviceToken: string | undefined;
+
+  let retryCount = 0;
+  while (retryCount < 2) {
+    try {
+      newDeviceToken = crypto.randomBytes(32).toString('hex');
+      const hashedDeviceToken = crypto.createHash('sha256').update(newDeviceToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      await db.trustedDevice.create({
+        data: {
+          userId: user.id,
+          deviceToken: hashedDeviceToken,
+          userAgent,
+          ipAddress,
+          expiresAt,
+        },
+      });
+      break; // Success
+    } catch (error: unknown) {
+      retryCount++;
+      if (retryCount >= 2) {
+        logger.error({ userId: user.id, error }, 'Failed to create trusted device after retry');
+        newDeviceToken = undefined;
+      }
+    }
+  }
+
+  const tokens = await issueTokens(user.id, user.role);
+  return { ...tokens, deviceToken: newDeviceToken };
 };
 
 export const issueTokens = async (userId: string, role: string) => {
@@ -141,10 +202,24 @@ export const refreshAccessToken = async (userId: string, token: string) => {
   return { accessToken: newAccessToken };
 };
 
-export const logoutUser = async (userId: string, token: string) => {
+export const logoutUser = async (userId: string, token: string, deviceToken?: string) => {
   await redis.del(`refreshToken:${userId}:${token}`);
 
   // Tambahkan ke blacklist.
   const ttl = 365 * 24 * 60 * 60; // 1 year fallback
   await redis.set(`blacklist:${token}`, 'revoked', 'EX', ttl);
+
+  if (deviceToken) {
+    try {
+      const hashedDeviceToken = crypto.createHash('sha256').update(deviceToken).digest('hex');
+      await db.trustedDevice.deleteMany({
+        where: {
+          userId,
+          deviceToken: hashedDeviceToken,
+        },
+      });
+    } catch (error) {
+      logger.error({ userId, error }, 'Error deleting trusted device on logout');
+    }
+  }
 };
