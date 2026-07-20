@@ -1,10 +1,29 @@
 import { Router } from 'express';
-import { createRca, getRca, updateRca, deleteRca, exportRca } from './rca.controller';
+import {
+  createRca,
+  getRca,
+  initRca,
+  updateRca,
+  deleteRca,
+  exportRca,
+  getBandsOptions,
+} from './rca.controller';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
-import { createUpdateRcaSchema, addRcaTeamMemberSchema, persetujuanRcaSchema } from './rca.schema';
-import { addTeamMember, removeTeamMember, persetujuanRca } from './rca.controller';
+import {
+  createUpdateRcaSchema,
+  addRcaTeamMemberSchema,
+  updateRcaTeamMemberSchema,
+  persetujuanRcaSchema,
+} from './rca.schema';
+import {
+  addTeamMember,
+  removeTeamMember,
+  persetujuanRca,
+  getTeamMembers,
+  updateTeamMember,
+} from './rca.controller';
 import { auditLog } from '@/middlewares/audit.middleware';
 
 const router = Router();
@@ -15,6 +34,8 @@ const router = Router();
  *   name: RCA
  *   description: Root Cause Analysis API
  */
+
+router.get('/:reportId/rca/init', authenticate, initRca);
 
 /**
  * @swagger
@@ -195,7 +216,14 @@ router.delete('/:reportId/rca', authenticate, requireRole(['ADMIN_UTAMA']), dele
 router.get('/:reportId/rca/export', authenticate, exportRca);
 
 // Team Member routes
+router.get('/:reportId/rca/team', authenticate, getTeamMembers);
 router.post('/:reportId/rca/team', authenticate, validate(addRcaTeamMemberSchema), addTeamMember);
+router.patch(
+  '/:reportId/rca/team/:memberId',
+  authenticate,
+  validate(updateRcaTeamMemberSchema),
+  updateTeamMember,
+);
 router.delete('/:reportId/rca/team/:memberId', authenticate, removeTeamMember);
 
 /**
@@ -235,6 +263,27 @@ router.patch(
   validate(persetujuanRcaSchema),
   auditLog('PERSETUJUAN_RCA', 'RCA', (req) => req.params.reportId as string),
   persetujuanRca,
+);
+
+export const rcaGlobalRouter = Router();
+
+/**
+ * @swagger
+ * /rca/bands-options:
+ *   get:
+ *     summary: Mendapatkan opsi bands RCA (Hijau, Biru, Kuning, Merah)
+ *     tags: [RCA]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mendapatkan opsi bands
+ */
+rcaGlobalRouter.get(
+  '/bands-options',
+  authenticate,
+  requireRole(['ADMIN', 'ADMIN_UTAMA']),
+  getBandsOptions,
 );
 
 export default router;
