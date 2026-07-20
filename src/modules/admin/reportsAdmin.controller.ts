@@ -198,6 +198,16 @@ export const assignReport = async (req: AuthRequest, res: Response, next: NextFu
       throw new ApiError(404, 'Laporan tidak ditemukan');
     }
 
+    if (assignedToId) {
+      const assignee = await db.user.findUnique({ where: { id: assignedToId } });
+      if (!assignee) {
+        throw new ApiError(404, 'User yang akan di-assign tidak ditemukan');
+      }
+      if (assignee.role !== 'ADMIN' && assignee.role !== 'ADMIN_UTAMA') {
+        throw new ApiError(400, 'User yang di-assign harus memiliki role ADMIN atau ADMIN_UTAMA');
+      }
+    }
+
     await db.reportHistory.create({
       data: {
         reportId: id,
