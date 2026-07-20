@@ -348,6 +348,31 @@ router.post(
   reportsAdminController.archiveReport,
 );
 
+/**
+ * @openapi
+ * /api/admin/reports/{id}:
+ *   delete:
+ *     tags:
+ *       - Admin
+ *     summary: Soft delete (Arsip) laporan (sama dengan POST /reports/{id}/archive)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Archived
+ */
+router.delete(
+  '/reports/:id',
+  auditLog('ARCHIVE_REPORT', 'Report', (req) => req.params.id as string),
+  reportsAdminController.archiveReport,
+);
+
 // Delete permanen khusus ADMIN_UTAMA
 /**
  * @openapi
