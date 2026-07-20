@@ -253,3 +253,40 @@ export const persetujuanRca = async (req: AuthRequest, res: Response, next: Next
     next(error);
   }
 };
+
+export const getBandsOptions = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const options = [
+      {
+        value: 'BIRU',
+        label: 'Biru',
+        deskripsi: 'Investigasi Sederhana - Maksimal 1 Minggu (Risiko Rendah)',
+      },
+      {
+        value: 'HIJAU',
+        label: 'Hijau',
+        deskripsi: 'Investigasi Sederhana - Maksimal 2 Minggu (Risiko Sedang)',
+      },
+      {
+        value: 'KUNING',
+        label: 'Kuning',
+        deskripsi:
+          'Investigasi Komprehensif RCA - Maksimal 45 Hari (Risiko Tinggi, perhatian Top Manajemen)',
+      },
+      {
+        value: 'MERAH',
+        label: 'Merah',
+        deskripsi:
+          'Investigasi Komprehensif RCA - Maksimal 45 Hari (Risiko Ekstrim, perhatian Direktur)',
+      },
+    ];
+
+    res.status(200).json({
+      success: true,
+      message: 'Berhasil mengambil opsi bands',
+      data: options,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

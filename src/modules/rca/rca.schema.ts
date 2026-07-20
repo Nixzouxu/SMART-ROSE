@@ -6,6 +6,7 @@ import {
   PeranTim,
   JenisPengisian,
   JenisInvestigasi,
+  GradingRisiko,
 } from '@prisma/client';
 
 export const rcaTimelineSchema = z.object({
@@ -52,7 +53,7 @@ export const createUpdateRcaSchema = z.object({
     kronologiSingkat: z.string().min(1, 'Kronologi singkat harus diisi'),
     tipeSubInsiden: z.string().optional(),
     tindakanSesuaiBands: z.string().optional(),
-    tindakanBands: z.string().optional(),
+    tindakanBands: z.nativeEnum(GradingRisiko).optional(),
     jenisPengisian: z.nativeEnum(JenisPengisian).optional(),
     jenisInvestigasi: z.nativeEnum(JenisInvestigasi).optional(),
     daftarInterviewee: z.array(z.string()).default([]),
@@ -73,7 +74,7 @@ export const createUpdateRcaSchema = z.object({
 
 export const addRcaTeamMemberSchema = z.object({
   body: z.object({
-    userId: z.string({ required_error: 'User ID wajib diisi' }).uuid('Format User ID tidak valid'),
+    userId: z.string().min(1, 'User ID wajib diisi').uuid('Format User ID tidak valid'),
     peran: z.nativeEnum(PeranTim),
   }),
 });

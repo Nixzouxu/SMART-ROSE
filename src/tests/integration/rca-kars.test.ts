@@ -80,15 +80,17 @@ describe('Revisi KARS - RCA Functional Tests', () => {
   });
 
   it('Bisa menambah anggota tim investigator', async () => {
+    // Cari user admin yang dibuat di beforeAll
+    const admin = await db.user.findFirst({ where: { email: 'admin_kars@rs.com' } });
     const res = await request(app)
       .post(`/api/reports/${reportId}/rca/team`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        nama: 'Dr. Investigator',
+        userId: admin?.id,
         peran: PeranTim.KETUA,
       });
     expect(res.status).toBe(201);
-    expect(res.body.data.nama).toBe('Dr. Investigator');
+    expect(res.body.data.userId).toBe(admin?.id);
     expect(res.body.data.peran).toBe(PeranTim.KETUA);
 
     const getRes = await request(app)
@@ -96,7 +98,7 @@ describe('Revisi KARS - RCA Functional Tests', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(getRes.body.data.teamMembers).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ nama: 'Dr. Investigator', peran: PeranTim.KETUA }),
+        expect.objectContaining({ userId: admin?.id, peran: PeranTim.KETUA }),
       ]),
     );
   });
@@ -108,7 +110,7 @@ describe('Revisi KARS - RCA Functional Tests', () => {
       .send({
         kronologiSingkat: 'Singkat',
         masalahAwal5Why: 'Masalah',
-        tindakanBands: 'Tindakan Kuning',
+        tindakanBands: 'KUNING',
         fiveWhyEntries: [],
         fishboneEntries: [],
         rencanaPerbaikanEntries: [],
@@ -118,7 +120,7 @@ describe('Revisi KARS - RCA Functional Tests', () => {
     const getRes = await request(app)
       .get(`/api/reports/${reportId}/rca`)
       .set('Authorization', `Bearer ${adminToken}`);
-    expect(getRes.body.data.tindakanBands).toBe('Tindakan Kuning');
+    expect(getRes.body.data.tindakanBands).toBe('KUNING');
   });
 
   it('Kalau jenisPengisian TEMPLATE dipilih, fishboneEntries otomatis terisi template default', async () => {

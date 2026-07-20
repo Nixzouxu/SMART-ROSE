@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { createRca, getRca, initRca, updateRca, deleteRca, exportRca } from './rca.controller';
+import {
+  createRca,
+  getRca,
+  initRca,
+  updateRca,
+  deleteRca,
+  exportRca,
+  getBandsOptions,
+} from './rca.controller';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
@@ -255,6 +263,27 @@ router.patch(
   validate(persetujuanRcaSchema),
   auditLog('PERSETUJUAN_RCA', 'RCA', (req) => req.params.reportId as string),
   persetujuanRca,
+);
+
+export const rcaGlobalRouter = Router();
+
+/**
+ * @swagger
+ * /rca/bands-options:
+ *   get:
+ *     summary: Mendapatkan opsi bands RCA (Hijau, Biru, Kuning, Merah)
+ *     tags: [RCA]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mendapatkan opsi bands
+ */
+rcaGlobalRouter.get(
+  '/bands-options',
+  authenticate,
+  requireRole(['ADMIN', 'ADMIN_UTAMA']),
+  getBandsOptions,
 );
 
 export default router;
