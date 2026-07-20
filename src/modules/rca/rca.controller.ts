@@ -38,6 +38,65 @@ export const createRca = async (req: AuthRequest, res: Response, next: NextFunct
   }
 };
 
+export const initRca = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    await checkAuthorization(reportId, req.user!);
+
+    const report = await prisma.report.findUnique({ where: { id: reportId } });
+    if (!report) {
+      throw new ApiError(404, 'Laporan tidak ditemukan');
+    }
+
+    try {
+      // Coba ambil RCA yang sudah ada
+      const rca = await rcaService.getRcaByReportId(reportId);
+      res.status(200).json({
+        success: true,
+        isNew: false,
+        data: rca,
+      });
+    } catch (err: any) {
+      if (err instanceof ApiError && err.statusCode === 404) {
+        // RCA belum ada, return format prefill
+        res.status(200).json({
+          success: true,
+          isNew: true,
+          prefilledFromReport: {
+            kronologiSingkat: report.kronologi,
+            masalahAwal5Why: report.kronologi,
+            referensiLaporan: {
+              jenisInsiden: report.jenisInsiden,
+              lokasi: report.lokasi,
+              unitKerja: report.unitKerja,
+              tanggalKejadian: report.tanggalKejadian,
+              gradingAwal: report.gradingAwal,
+              dampak: report.dampak,
+            },
+          },
+          emptyForManualInput: {
+            timKetua: null,
+            timSekretaris: null,
+            timAnggota: [],
+            observasi: null,
+            dokumentasi: null,
+            tipeSubInsiden: null,
+            tindakanSesuaiBands: null,
+            tindakanBands: null,
+            daftarInterviewee: [],
+            jenisInvestigasi: 'RCA_LENGKAP',
+            jenisPengisian: null,
+          },
+        });
+      } else {
+        throw err;
+      }
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getRca = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const reportId = req.params.reportId as string;

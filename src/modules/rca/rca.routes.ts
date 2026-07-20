@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createRca, getRca, updateRca, deleteRca, exportRca } from './rca.controller';
+import { createRca, getRca, initRca, updateRca, deleteRca, exportRca } from './rca.controller';
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
@@ -15,6 +15,8 @@ const router = Router();
  *   name: RCA
  *   description: Root Cause Analysis API
  */
+
+router.get('/:reportId/rca/init', authenticate, initRca);
 
 /**
  * @swagger
