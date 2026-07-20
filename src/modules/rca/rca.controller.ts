@@ -175,6 +175,21 @@ export const exportRca = async (req: AuthRequest, res: Response, next: NextFunct
   }
 };
 
+export const getTeamMembers = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    await checkAuthorization(reportId, req.user!);
+    const members = await rcaService.getTeamMembers(reportId);
+    res.status(200).json({
+      success: true,
+      message: 'Berhasil mengambil anggota tim RCA',
+      data: members,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const addTeamMember = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const reportId = req.params.reportId as string;
@@ -183,6 +198,22 @@ export const addTeamMember = async (req: AuthRequest, res: Response, next: NextF
     res.status(201).json({
       success: true,
       message: 'Anggota tim berhasil ditambahkan',
+      data: member,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTeamMember = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const reportId = req.params.reportId as string;
+    const memberId = req.params.memberId as string;
+    await checkAuthorization(reportId, req.user!);
+    const member = await rcaService.updateTeamMember(reportId, memberId, req.body);
+    res.status(200).json({
+      success: true,
+      message: 'Anggota tim berhasil diperbarui',
       data: member,
     });
   } catch (error) {

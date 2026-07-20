@@ -3,8 +3,19 @@ import { createRca, getRca, initRca, updateRca, deleteRca, exportRca } from './r
 import { authenticate } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/rbac.middleware';
 import { validate } from '@/middlewares/validate.middleware';
-import { createUpdateRcaSchema, addRcaTeamMemberSchema, persetujuanRcaSchema } from './rca.schema';
-import { addTeamMember, removeTeamMember, persetujuanRca } from './rca.controller';
+import {
+  createUpdateRcaSchema,
+  addRcaTeamMemberSchema,
+  updateRcaTeamMemberSchema,
+  persetujuanRcaSchema,
+} from './rca.schema';
+import {
+  addTeamMember,
+  removeTeamMember,
+  persetujuanRca,
+  getTeamMembers,
+  updateTeamMember,
+} from './rca.controller';
 import { auditLog } from '@/middlewares/audit.middleware';
 
 const router = Router();
@@ -197,7 +208,14 @@ router.delete('/:reportId/rca', authenticate, requireRole(['ADMIN_UTAMA']), dele
 router.get('/:reportId/rca/export', authenticate, exportRca);
 
 // Team Member routes
+router.get('/:reportId/rca/team', authenticate, getTeamMembers);
 router.post('/:reportId/rca/team', authenticate, validate(addRcaTeamMemberSchema), addTeamMember);
+router.patch(
+  '/:reportId/rca/team/:memberId',
+  authenticate,
+  validate(updateRcaTeamMemberSchema),
+  updateTeamMember,
+);
 router.delete('/:reportId/rca/team/:memberId', authenticate, removeTeamMember);
 
 /**
