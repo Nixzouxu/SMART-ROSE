@@ -10,8 +10,9 @@ export const auditLog = (
   return (req: Request, res: Response, next: NextFunction) => {
     // Jalankan asinkron tanpa memblokir response
     res.on('finish', () => {
-      // Pastikan status sukses (opsional, tapi umumnya audit untuk sukses/gagal dicatat)
-      // Kita catat semua aksi
+      // Hanya log request yang sukses (skip jika error)
+      if (res.statusCode >= 400) return;
+
       const userId = (req as AuthRequest).user?.userId || null;
 
       let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

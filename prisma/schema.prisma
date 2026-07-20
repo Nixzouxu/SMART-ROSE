@@ -166,6 +166,7 @@ model User {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   deletedAt        DateTime?        @map("deleted_at")
+  aktif            Boolean          @default(true) @map("aktif")
 
   reports         Report[]            @relation("Pelapor")
   reportHistories ReportHistory[]     @relation("Actor")

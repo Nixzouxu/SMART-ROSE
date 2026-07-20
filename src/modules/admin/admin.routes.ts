@@ -91,6 +91,17 @@ router.post(
   userManagementController.createAdminUser,
 );
 
+router.get('/users', requireRole(['ADMIN_UTAMA']), userManagementController.getAllUsers);
+
+router.patch(
+  '/users/:id',
+  requireRole(['ADMIN_UTAMA']),
+  auditLog('UPDATE_USER', 'User'),
+  userManagementController.updateUser,
+);
+
+router.delete('/users/:id', requireRole(['ADMIN_UTAMA']), userManagementController.deleteUser);
+
 /**
  * @openapi
  * /admin/users/{id}/approve:
