@@ -15,7 +15,14 @@ const parseDateFilter = (req: AuthRequest) => {
   const startDateStr = req.query.startDate as string | undefined;
   const endDateStr = req.query.endDate as string | undefined;
   const startDate = startDateStr ? new Date(startDateStr) : undefined;
-  const endDate = endDateStr ? new Date(endDateStr) : undefined;
+  let endDate: Date | undefined = undefined;
+
+  if (endDateStr) {
+    const endDateParsed = new Date(endDateStr);
+    endDateParsed.setUTCHours(23, 59, 59, 999);
+    endDate = endDateParsed;
+  }
+
   return { startDate, endDate };
 };
 
