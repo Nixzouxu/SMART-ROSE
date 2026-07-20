@@ -37,11 +37,11 @@ const router = Router();
  *           schema:
  *             type: object
  *             properties:
- *               timKetua:
+ *               timKetuaLegacyText:
  *                 type: string
- *               timSekretaris:
+ *               timSekretarisLegacyText:
  *                 type: string
- *               timAnggota:
+ *               timAnggotaLegacyText:
  *                 type: array
  *                 items:
  *                   type: string

@@ -150,9 +150,9 @@ export const exportRcaToExcel = async (reportId: string): Promise<Buffer> => {
     ['', ''],
     ['TIM RCA', ''],
     ['Disusun Oleh', rca.disusunOleh.nama],
-    ['Ketua Tim', rca.timKetua ?? '-'],
-    ['Sekretaris Tim', rca.timSekretaris ?? '-'],
-    ['Anggota Tim', rca.timAnggota.join(', ') || '-'],
+    ['Ketua Tim', rca.timKetuaLegacyText ?? '-'],
+    ['Sekretaris Tim', rca.timSekretarisLegacyText ?? '-'],
+    ['Anggota Tim', rca.timAnggotaLegacyText.join(', ') || '-'],
     ['', ''],
     ['DETAIL RCA', ''],
     ['Tipe Sub Insiden', rca.tipeSubInsiden ?? '-'],
@@ -403,9 +403,9 @@ export const exportRcaToPdf = async (reportId: string): Promise<Buffer> => {
     // ---- Tim RCA ----
     sectionHeader('TIM RCA');
     labelValue('Disusun Oleh', rca.disusunOleh.nama);
-    labelValue('Ketua Tim', rca.timKetua ?? '-');
-    labelValue('Sekretaris Tim', rca.timSekretaris ?? '-');
-    labelValue('Anggota Tim', rca.timAnggota.join(', ') || '-');
+    labelValue('Ketua Tim', rca.timKetuaLegacyText ?? '-');
+    labelValue('Sekretaris Tim', rca.timSekretarisLegacyText ?? '-');
+    labelValue('Anggota Tim', rca.timAnggotaLegacyText.join(', ') || '-');
     labelValue('Daftar Interviewee', rca.daftarInterviewee.join(', ') || '-');
 
     // ---- Detail RCA ----

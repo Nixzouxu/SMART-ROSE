@@ -334,9 +334,9 @@ model Announcement {
 model RootCauseAnalysis {
   id                  String          @id @default(uuid())
   reportId            String          @unique @map("report_id")
-  timKetua            String?         @map("tim_ketua")
-  timSekretaris       String?         @map("tim_sekretaris")
-  timAnggota          String[]        @map("tim_anggota")
+  timKetuaLegacyText      String?         @map("tim_ketua_legacy_text")
+  timSekretarisLegacyText String?         @map("tim_sekretaris_legacy_text")
+  timAnggotaLegacyText    String[]        @map("tim_anggota_legacy_text")
   observasi           String?         @db.Text
   dokumentasi         String?         @db.Text
   kronologiSingkat    String          @map("kronologi_singkat") @db.Text
