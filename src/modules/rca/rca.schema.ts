@@ -48,9 +48,9 @@ export const rcaRencanaPerbaikanSchema = z.object({
 
 export const createUpdateRcaSchema = z.object({
   body: z.object({
-    timKetua: z.string().optional(),
-    timSekretaris: z.string().optional(),
-    timAnggota: z.array(z.string()).default([]),
+    timKetuaLegacyText: z.string().optional(),
+    timSekretarisLegacyText: z.string().optional(),
+    timAnggotaLegacyText: z.array(z.string()).default([]),
     observasi: z.string().optional(),
     dokumentasi: z.string().optional(),
     kronologiSingkat: z.string().min(1, 'Kronologi singkat harus diisi'),

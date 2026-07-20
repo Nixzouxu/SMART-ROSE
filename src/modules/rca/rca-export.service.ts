@@ -52,7 +52,8 @@ const fetchSimpleRcaData = async (reportId: string) => {
   }
 
   const ketuaMember = rca.teamMembers[0];
-  const namaKetua = ketuaMember?.user?.nama ?? ketuaMember?.namaLegacyText ?? rca.timKetua ?? '-';
+  const namaKetua =
+    ketuaMember?.user?.nama ?? ketuaMember?.namaLegacyText ?? rca.timKetuaLegacyText ?? '-';
 
   const tanggalSelesai =
     rca.status === StatusRca.FINAL || rca.status === StatusRca.DISETUJUI ? rca.updatedAt : null;

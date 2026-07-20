@@ -58,11 +58,11 @@ router.get('/:reportId/rca/init', authenticate, initRca);
  *           schema:
  *             type: object
  *             properties:
- *               timKetua:
+ *               timKetuaLegacyText:
  *                 type: string
- *               timSekretaris:
+ *               timSekretarisLegacyText:
  *                 type: string
- *               timAnggota:
+ *               timAnggotaLegacyText:
  *                 type: array
  *                 items:
  *                   type: string

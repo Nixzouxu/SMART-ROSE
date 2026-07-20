@@ -174,9 +174,9 @@ describe('E2E Report & RCA Flow Integration Test', () => {
         .put(`/api/reports/${reportId}/rca`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          timKetua: 'Dr. Test',
-          timSekretaris: 'Suster Test',
-          timAnggota: ['Anggota 1'],
+          timKetuaLegacyText: 'Dr. Test',
+          timSekretarisLegacyText: 'Suster Test',
+          timAnggotaLegacyText: ['Anggota 1'],
           kronologiSingkat: 'Test RCA E2E Updated',
           masalahAwal5Why: 'Pasien terpeleset v2',
           jenisPengisian: 'TEMPLATE',
