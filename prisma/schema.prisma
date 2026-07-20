@@ -168,6 +168,7 @@ model User {
   deletedAt        DateTime?        @map("deleted_at")
   aktif            Boolean          @default(true) @map("aktif")
 
+  auditLogs       AuditLog[]
   reports         Report[]            @relation("Pelapor")
   reportHistories ReportHistory[]     @relation("Actor")
   chatbotLogs     ChatbotLog[]
@@ -487,6 +488,7 @@ model RcaAttachment {
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
   action    String
   entity    String
   entityId  String?  @map("entity_id")

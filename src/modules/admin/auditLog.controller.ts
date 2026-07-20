@@ -23,14 +23,20 @@ export const getAuditLogs = async (req: AuthRequest, res: Response, next: NextFu
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, nama: true, role: true } } },
       }),
     ]);
+
+    const mappedItems = items.map((item) => ({
+      ...item,
+      actorName: item.user?.nama || 'Sistem',
+    }));
 
     res.status(200).json({
       success: true,
       message: 'Berhasil mengambil audit log',
       data: {
-        items,
+        items: mappedItems,
         total,
         page,
         limit,
