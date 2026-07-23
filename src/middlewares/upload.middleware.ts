@@ -1,5 +1,7 @@
 import multer from 'multer';
 import { ApiError } from '@/utils/apiError';
+import { Request, Response, NextFunction } from 'express';
+import * as fileType from 'file-type';
 
 // Setup memori storage agar file tidak disimpan secara fisik di lokal server,
 // melainkan di buffer untuk dikirim ke StorageProvider (MinIO/Supabase)
@@ -57,37 +59,37 @@ export const uploadRcaMiddleware = multer({
   },
 });
 
-import { Request, Response, NextFunction } from 'express';
-import * as fileType from 'file-type';
-
-export const validateMagicBytes = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.file) {
-    return next();
-  }
-
-  try {
-    const typeInfo = await fileType.fromBuffer(req.file.buffer);
-    if (!typeInfo) {
-      throw new ApiError(400, 'Tipe file tidak dikenali atau file rusak.');
+/**
+ * Factory untuk membuat middleware validasi magic bytes dengan whitelist spesifik.
+ * Mencegah pemalsuan ekstensi/mimetype: memverifikasi isi file asli, bukan
+ * hanya mimetype yang diklaim oleh client.
+ */
+export const validateMagicBytes = (allowedTypes: string[] = allowedMimeTypes) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.file) {
+      return next();
     }
-
-    // Mime type asli dari library file-type
-    const realMimeType = typeInfo.mime;
-
-    // Pastikan realMimeType ada di whitelist global kita atau sesuai kebutuhan endpoint
-    // Karena middleware ini bisa dipakai di attachment biasa maupun RCA,
-    // kita cukup mengecek apakah mime aslinya didukung secara global
-    if (!allowedMimeTypes.includes(realMimeType)) {
-      throw new ApiError(
-        400,
-        `Isi file tidak sesuai (terdeteksi: ${realMimeType}). Pemalsuan ekstensi tidak diizinkan.`,
-      );
+    try {
+      const typeInfo = await fileType.fromBuffer(req.file.buffer);
+      if (!typeInfo) {
+        throw new ApiError(400, 'Tipe file tidak dikenali atau file rusak.');
+      }
+      // Mime type asli dari library file-type
+      const realMimeType = typeInfo.mime;
+      // Cek apakah mime asli sesuai whitelist yang diberikan (global atau RCA)
+      if (!allowedTypes.includes(realMimeType)) {
+        throw new ApiError(
+          400,
+          `Isi file tidak sesuai (terdeteksi: ${realMimeType}). Pemalsuan ekstensi tidak diizinkan.`,
+        );
+      }
+      // Timpa mimetype dari client dengan mimetype asli yang tervalidasi
+      req.file.mimetype = realMimeType;
+      next();
+    } catch (error) {
+      next(error);
     }
-
-    // Timpa mimetype dari client dengan mimetype asli yang tervalidasi
-    req.file.mimetype = realMimeType;
-    next();
-  } catch (error) {
-    next(error);
-  }
+  };
 };
+
+export const allowedRcaTypes = allowedRcaMimeTypes;

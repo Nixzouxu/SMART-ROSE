@@ -12,6 +12,7 @@ import {
   uploadMiddleware,
   uploadRcaMiddleware,
   validateMagicBytes,
+  allowedRcaTypes,
 } from '@/middlewares/upload.middleware';
 import * as attachmentController from './attachment.controller';
 import { publicRateLimit } from '@/middlewares/publicRateLimit.middleware';
@@ -200,7 +201,7 @@ router.post(
   '/:id/attachments',
   publicRateLimit,
   uploadMiddleware.single('file'),
-  validateMagicBytes,
+  validateMagicBytes(),
   attachmentController.uploadAttachment,
 );
 
@@ -326,7 +327,7 @@ router.post(
   authenticate,
   requireRole(['ADMIN', 'ADMIN_UTAMA']),
   uploadRcaMiddleware.single('file'),
-  validateMagicBytes,
+  validateMagicBytes(allowedRcaTypes),
   attachmentController.uploadRcaAttachment,
 );
 
