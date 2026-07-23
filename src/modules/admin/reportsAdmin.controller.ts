@@ -7,6 +7,7 @@ import { Prisma, StatusLaporan, JenisInsiden } from '@prisma/client';
 import { regradeReport } from './regrade.service';
 import { generateMassReportExcel, generateMassReportPdf } from '@/modules/reports/export.service';
 import { decryptText, encryptText } from '@/utils/encryption';
+import { refreshAttachmentUrls } from '@/modules/reports/attachment.helper';
 
 export const listReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -90,6 +91,10 @@ export const getReportDetail = async (req: AuthRequest, res: Response, next: Nex
 
     if (!report) {
       throw new ApiError(404, 'Laporan tidak ditemukan');
+    }
+
+    if (report.attachments && report.attachments.length > 0) {
+      report.attachments = (await refreshAttachmentUrls(report.attachments)) as any;
     }
 
     if (report.kronologi) {

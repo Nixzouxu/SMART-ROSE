@@ -3,6 +3,7 @@ import { db } from '@/config/db';
 import { generateTrackingNumber } from './trackingNumber.util';
 import { ApiError } from '@/utils/apiError';
 import { encryptText, decryptText } from '@/utils/encryption';
+import { refreshAttachmentUrls } from './attachment.helper';
 
 // Fungsi bantuan untuk menutupi (mask) pelaporId jika laporan bersifat anonim.
 // IsAnonim pada database TIDAK menghapus pelaporId. Ini penting agar tim investigasi internal
@@ -141,7 +142,14 @@ export const getMyReports = async (userId: string, page: number, limit: number) 
     page,
     limit,
     totalPages: Math.ceil(total / limit),
-    data: reports.map(maskAnonimReport),
+    data: await Promise.all(
+      reports.map(async (r) => {
+        if (r.attachments && r.attachments.length > 0) {
+          r.attachments = (await refreshAttachmentUrls(r.attachments)) as any;
+        }
+        return maskAnonimReport(r);
+      }),
+    ),
   };
 };
 
@@ -160,6 +168,10 @@ export const getMyReportDetail = async (userId: string, reportId: string) => {
 
   if (report.pelaporId !== userId) {
     throw new ApiError(403, 'Anda tidak berhak mengakses laporan ini');
+  }
+
+  if (report.attachments && report.attachments.length > 0) {
+    report.attachments = (await refreshAttachmentUrls(report.attachments)) as any;
   }
 
   return maskAnonimReport(report);
