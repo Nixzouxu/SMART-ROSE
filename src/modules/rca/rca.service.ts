@@ -3,6 +3,7 @@ import { ApiError } from '@/utils/apiError';
 import { createUpdateRcaSchema, addRcaTeamMemberSchema } from './rca.schema';
 import { z } from 'zod';
 import { KategoriFishbone, JenisPengisian } from '@prisma/client';
+import { refreshAttachmentUrls } from '@/modules/reports/attachment.helper';
 
 type RcaInput = z.infer<typeof createUpdateRcaSchema>['body'];
 type RcaTeamMemberInput = z.infer<typeof addRcaTeamMemberSchema>['body'];
@@ -93,12 +94,18 @@ export class RcaService {
         fishboneEntries: { orderBy: { urutan: 'asc' } },
         rencanaPerbaikanEntries: { orderBy: { urutan: 'asc' } },
         teamMembers: true,
+        attachments: true,
       },
     });
 
     if (!rca) {
       throw new ApiError(404, 'RCA tidak ditemukan');
     }
+
+    if (rca.attachments && rca.attachments.length > 0) {
+      rca.attachments = (await refreshAttachmentUrls(rca.attachments)) as any;
+    }
+
     return rca;
   }
 
