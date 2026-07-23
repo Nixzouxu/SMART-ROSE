@@ -7,6 +7,10 @@ services:
     ports:
       - "127.0.0.1:4000:4000"
     restart: unless-stopped
+    logging:
+      driver: "journald"
+      options:
+        tag: "smartrose-app"
     depends_on:
       - postgres
       - redis
@@ -20,11 +24,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    logging:
+      driver: "journald"
+      options:
+        tag: "smartrose-postgres"
 
   redis:
     image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD}
     restart: unless-stopped
+    logging:
+      driver: "journald"
+      options:
+        tag: "smartrose-redis"
 
 volumes:
   postgres_data:
