@@ -55,10 +55,17 @@ export const listReports = async (req: AuthRequest, res: Response, next: NextFun
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data: reports.map((r) => ({
-          ...r,
-          kronologi: r.kronologi ? decryptText(r.kronologi) : r.kronologi,
-        })), // Admin melihat semuanya, tidak di mask!
+        data: reports.map((r) => {
+          const mapped: Record<string, any> = {
+            ...r,
+            kronologi: r.kronologi ? decryptText(r.kronologi) : r.kronologi,
+            namaPelapor: r.isAnonim ? null : r.pelapor?.nama || null,
+          };
+          if (r.isAnonim) {
+            delete mapped.pelapor;
+          }
+          return mapped;
+        }),
       },
     });
   } catch (error) {
@@ -101,10 +108,18 @@ export const getReportDetail = async (req: AuthRequest, res: Response, next: Nex
       report.kronologi = decryptText(report.kronologi);
     }
 
+    const mapped: Record<string, any> = {
+      ...report,
+      namaPelapor: report.isAnonim ? null : report.pelapor?.nama || null,
+    };
+    if (report.isAnonim) {
+      delete mapped.pelapor;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Berhasil mengambil detail laporan',
-      data: report, // Tidak dimask untuk admin
+      data: mapped,
     });
   } catch (error) {
     next(error);
@@ -181,6 +196,9 @@ export const updateReport = async (req: AuthRequest, res: Response, next: NextFu
       where: { id },
       data: updatedData,
     });
+
+    req.body.reportId = existingReport.id;
+    req.body.trackingNumber = trackingNumber || existingReport.trackingNumber;
 
     res.status(200).json({
       success: true,
@@ -328,6 +346,9 @@ export const regradeReportHandler = async (req: AuthRequest, res: Response, next
     }
 
     const result = await regradeReport(adminId, reportId, gradingBaru, alasan);
+
+    req.body.reportId = existingReport.id;
+    req.body.trackingNumber = existingReport.trackingNumber;
 
     res.status(200).json({
       success: true,
