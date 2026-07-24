@@ -212,6 +212,11 @@ model Report {
   kasusSpesialisasi                 String?                  @map("kasus_spesialisasi")
   akibatTerhadapPasien              AkibatPasien?            @map("akibat_terhadap_pasien")
   apakahKejadianSerupaPernahTerjadi Boolean?                 @map("apakah_kejadian_serupa_pernah_terjadi")
+  kejadianSerupaDetail              String?                  @map("kejadian_serupa_detail")
+  tindakanDilakukan                 String?                  @map("tindakan_dilakukan")
+  tindakanDilakukanOleh             String?                  @map("tindakan_dilakukan_oleh")
+  akarPenyebab                      String?                  @map("akar_penyebab")
+  rekomendasi                       String?                  @map("rekomendasi")
 
   catatanInvestigasi  String?   @map("catatan_investigasi") @db.Text
   deadlineInvestigasi DateTime? @map("deadline_investigasi")

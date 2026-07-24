@@ -35,6 +35,11 @@ type CreateReportInput = {
   gradingAwal: 'HIJAU' | 'BIRU' | 'KUNING' | 'MERAH';
   isAnonim?: boolean;
   status?: 'DRAFT' | 'SUBMITTED';
+  tindakanDilakukan?: string;
+  tindakanDilakukanOleh?: string;
+  akarPenyebab?: string;
+  rekomendasi?: string;
+  kejadianSerupaDetail?: string;
 };
 
 export const createReport = async (pelaporId: string | null, data: CreateReportInput) => {
