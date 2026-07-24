@@ -80,7 +80,7 @@ export const askChatbot = async (userId: string | null, pertanyaan: string) => {
   for (const admin of admins) {
     await createNotification(
       admin.id,
-      'PENGUMUMAN', // Menggunakan PENGUMUMAN karena tipe eskalasi chatbot ke admin blm ada secara eksplisit, bisa juga pakai tipe lain jika dirasa lebih tepat
+      'CHATBOT', // Menggunakan CHATBOT karena ini eskalasi chatbot
       pesanNotifikasi,
     );
   }
@@ -134,7 +134,7 @@ export const answerChatbotLog = async (logId: string, adminId: string, jawaban: 
   if (updatedLog.userId) {
     await createNotification(
       updatedLog.userId,
-      'CHATBOT_DIJAWAB',
+      'CHATBOT',
       `Pertanyaan Anda telah dijawab oleh Admin.`,
     );
   }

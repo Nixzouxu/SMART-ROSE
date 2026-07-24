@@ -3,13 +3,13 @@
 //
 // Job ini melakukan dua hal setiap hari:
 //
-// 1. DEADLINE_MENDEKAT: Kirim notifikasi ke admin yang di-assign untuk laporan
+// 1. INVESTIGASI_H3: Kirim notifikasi ke admin yang di-assign untuk laporan
 //    yang deadlineInvestigasi <= 3 hari dari sekarang (dan belum OVERDUE/SELESAI/ARSIP).
 //    Jendela 3 hari memberi admin waktu yang cukup untuk merespons sebelum terlambat.
 //
 // 2. AUTO_ESCALATE_OVERDUE: Ubah status laporan yang deadlineInvestigasi sudah
 //    lewat menjadi OVERDUE dan catat ReportHistory dengan actorId = user sistem
-//    (system@smartrose.internal). Juga kirim notifikasi DEADLINE_LEWAT ke admin
+//    (system@smartrose.internal). Juga kirim notifikasi INVESTIGASI_OVERDUE ke admin
 //    yang di-assign.
 //
 // Jika user sistem tidak ditemukan saat job berjalan, error dicatat ke logger
@@ -19,6 +19,7 @@
 import { db } from '@/config/db';
 import { logger } from '@/utils/logger';
 import { createNotification } from '@/modules/notifications/notifications.service';
+import { TipeNotifikasi } from '@prisma/client';
 
 const SYSTEM_USER_EMAIL = 'system@smartrose.internal';
 const HARI_PERINGATAN_DEADLINE = 3;
@@ -39,24 +40,24 @@ export async function runDailySlaCheck(): Promise<void> {
 }
 
 /**
- * Kirim notifikasi DEADLINE_MENDEKAT untuk laporan yang deadlineInvestigasi
- * jatuh dalam <= HARI_PERINGATAN_DEADLINE hari dari sekarang.
+ * Kirim notifikasi INVESTIGASI untuk laporan yang deadlineInvestigasi
+ * jatuh dalam <= 3 hari (RCA) atau <= 1 hari (Investigasi Sederhana).
  */
 async function cekDeadlineMendekat(sekarang: Date): Promise<void> {
-  const batasAtas = new Date(sekarang);
-  batasAtas.setDate(batasAtas.getDate() + HARI_PERINGATAN_DEADLINE);
+  const batasAtasRca = new Date(sekarang);
+  batasAtasRca.setDate(batasAtasRca.getDate() + 3);
 
   // Ambil laporan yang:
   // - deadlineInvestigasi ada
-  // - deadlineInvestigasi > sekarang (belum terlampaui, untuk membedakan dari overdue)
-  // - deadlineInvestigasi <= sekarang + 3 hari
-  // - statusnya masih aktif (bukan SELESAI, OVERDUE, ARSIP)
+  // - deadlineInvestigasi > sekarang (belum terlampaui)
+  // - deadlineInvestigasi <= sekarang + 3 hari (batas max untuk query RCA)
+  // - statusnya masih aktif
   // - ada admin yang di-assign
   const laporan = await db.report.findMany({
     where: {
       deadlineInvestigasi: {
         gt: sekarang,
-        lte: batasAtas,
+        lte: batasAtasRca,
       },
       status: {
         notIn: ['SELESAI', 'OVERDUE', 'ARSIP'],
@@ -71,18 +72,53 @@ async function cekDeadlineMendekat(sekarang: Date): Promise<void> {
       assignedToId: true,
       deadlineInvestigasi: true,
       status: true,
+      gradingFinal: true,
+      gradingAwal: true,
     },
   });
 
-  if (laporan.length === 0) {
+  // Filter based on grading
+  const laporanMendekat = laporan.filter((lap) => {
+    const grading = lap.gradingFinal ?? lap.gradingAwal;
+    const isRca = grading === null || grading === 'MERAH' || grading === 'KUNING';
+    const sisaHari = Math.ceil(
+      (lap.deadlineInvestigasi!.getTime() - sekarang.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (isRca) {
+      return sisaHari <= 3;
+    } else {
+      return sisaHari <= 1;
+    }
+  });
+
+  if (laporanMendekat.length === 0) {
     logger.info('[SLA Job] Tidak ada laporan dengan deadline mendekat.');
     return;
   }
 
-  logger.info(`[SLA Job] Ditemukan ${laporan.length} laporan dengan deadline mendekat.`);
+  logger.info(`[SLA Job] Ditemukan ${laporanMendekat.length} laporan dengan deadline mendekat.`);
 
-  for (const lap of laporan) {
+  for (const lap of laporanMendekat) {
     try {
+      // Pengecekan anti-duplikat menggunakan keyword
+      const existingNotif = await db.notification.findFirst({
+        where: {
+          referensiId: lap.id,
+          tipe: TipeNotifikasi.INVESTIGASI,
+          pesan: {
+            contains: 'akan melampaui deadline',
+          },
+        },
+      });
+
+      if (existingNotif) {
+        logger.info(
+          `[SLA Job] Laporan ${lap.id} sudah pernah dikirimi notifikasi deadline mendekat. Dilewati.`,
+        );
+        continue;
+      }
+
       const sisaHari = Math.ceil(
         (lap.deadlineInvestigasi!.getTime() - sekarang.getTime()) / (1000 * 60 * 60 * 24),
       );
@@ -92,16 +128,16 @@ async function cekDeadlineMendekat(sekarang: Date): Promise<void> {
         ` dalam ${sisaHari} hari (${lap.deadlineInvestigasi!.toLocaleDateString('id-ID')}).` +
         ` Segera selesaikan investigasi.`;
 
-      await createNotification(lap.assignedToId!, 'DEADLINE_MENDEKAT', pesan);
+      await createNotification(lap.assignedToId!, TipeNotifikasi.INVESTIGASI, pesan, lap.id);
 
       logger.info(
-        `[SLA Job] Notifikasi DEADLINE_MENDEKAT dikirim untuk laporan ${lap.id} ` +
+        `[SLA Job] Notifikasi INVESTIGASI (Mendekat) dikirim untuk laporan ${lap.id} ` +
           `ke admin ${lap.assignedToId}.`,
       );
     } catch (err) {
       logger.error(
         { err, reportId: lap.id },
-        '[SLA Job] Gagal kirim notifikasi DEADLINE_MENDEKAT untuk laporan.',
+        '[SLA Job] Gagal kirim notifikasi INVESTIGASI (Mendekat) untuk laporan.',
       );
     }
   }
@@ -197,17 +233,34 @@ async function eskalasiBatasWaktuTerlampaui(sekarang: Date): Promise<void> {
 
       // 3. Kirim notifikasi ke admin yang di-assign (jika ada)
       if (lap.assignedToId) {
-        const pesan =
-          `Laporan ${lap.trackingNumber ?? lap.id} telah OVERDUE.` +
-          ` Deadline investigasi (${lap.deadlineInvestigasi?.toLocaleDateString('id-ID') ?? '-'})` +
-          ` telah terlampaui. Status diubah otomatis menjadi OVERDUE oleh sistem.`;
+        // Pengecekan anti-duplikat menggunakan keyword
+        const existingNotif = await db.notification.findFirst({
+          where: {
+            referensiId: lap.id,
+            tipe: TipeNotifikasi.INVESTIGASI,
+            pesan: {
+              contains: 'telah OVERDUE',
+            },
+          },
+        });
 
-        await createNotification(lap.assignedToId, 'DEADLINE_LEWAT', pesan);
+        if (!existingNotif) {
+          const pesan =
+            `Laporan ${lap.trackingNumber ?? lap.id} telah OVERDUE.` +
+            ` Deadline investigasi (${lap.deadlineInvestigasi?.toLocaleDateString('id-ID') ?? '-'})` +
+            ` telah terlampaui. Status diubah otomatis menjadi OVERDUE oleh sistem.`;
 
-        logger.info(
-          `[SLA Job] Notifikasi DEADLINE_LEWAT dikirim untuk laporan ${lap.id}` +
-            ` ke admin ${lap.assignedToId}.`,
-        );
+          await createNotification(lap.assignedToId, TipeNotifikasi.INVESTIGASI, pesan, lap.id);
+
+          logger.info(
+            `[SLA Job] Notifikasi INVESTIGASI (Lewat) dikirim untuk laporan ${lap.id}` +
+              ` ke admin ${lap.assignedToId}.`,
+          );
+        } else {
+          logger.info(
+            `[SLA Job] Laporan ${lap.id} sudah pernah dikirimi notifikasi overdue. Dilewati.`,
+          );
+        }
       }
     } catch (err) {
       logger.error(

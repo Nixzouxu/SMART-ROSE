@@ -61,12 +61,11 @@ enum TipeMedia {
 }
 
 enum TipeNotifikasi {
-  LAPORAN_BARU
-  STATUS_BERUBAH
-  DEADLINE_MENDEKAT
-  DEADLINE_LEWAT
-  CHATBOT_DIJAWAB
-  PENGUMUMAN
+  LAPORAN
+  SENTINEL
+  CHATBOT
+  INVESTIGASI
+  UPDATE
 }
 
 enum StatusEskalasiChatbot {
@@ -311,12 +310,13 @@ model ChatbotLog {
 }
 
 model Notification {
-  id        String         @id @default(uuid())
-  userId    String         @map("user_id")
-  tipe      TipeNotifikasi
-  pesan     String
-  isRead    Boolean        @default(false) @map("is_read")
-  createdAt DateTime       @default(now()) @map("created_at")
+  id          String         @id @default(uuid())
+  userId      String         @map("user_id")
+  tipe        TipeNotifikasi
+  pesan       String
+  referensiId String?        @map("referensi_id")
+  isRead      Boolean        @default(false) @map("is_read")
+  createdAt   DateTime       @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 

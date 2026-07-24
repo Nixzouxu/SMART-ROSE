@@ -6,13 +6,7 @@ import { db } from '@/config/db';
 import { logger } from '@/utils/logger';
 import { ApiError } from '@/utils/apiError';
 
-type TipeNotifikasi =
-  | 'LAPORAN_BARU'
-  | 'STATUS_BERUBAH'
-  | 'DEADLINE_MENDEKAT'
-  | 'DEADLINE_LEWAT'
-  | 'CHATBOT_DIJAWAB'
-  | 'PENGUMUMAN';
+type TipeNotifikasi = 'LAPORAN' | 'SENTINEL' | 'CHATBOT' | 'INVESTIGASI' | 'UPDATE';
 
 // Lazy-load socket config untuk menghindari circular dependency saat startup.
 // Menggunakan require() supaya TypeScript module resolution tidak komplain
@@ -32,28 +26,31 @@ const emitToSocket = (room: string, event: string, payload: Record<string, any>)
 
 /**
  * Membuat satu notifikasi untuk satu user.
- * Signature TIDAK berubah supaya semua caller (chatbot, SLA job) tidak perlu dimodifikasi.
- * Setelah simpan ke DB, emit event notification:new via Socket.io ke room user:{userId}.
+ * Signature ditambahkan referensiId opsional.
+ * Setelah simpan ke DB, emit event notification:new via Socket.io ke room admin:{userId}.
  */
 export const createNotification = async (
   userId: string,
   tipe: TipeNotifikasi,
   pesan: string,
+  referensiId?: string,
 ): Promise<void> => {
   const notification = await db.notification.create({
     data: {
       userId,
       tipe,
       pesan,
+      referensiId: referensiId ?? null,
       isRead: false,
     },
   });
 
-  emitToSocket(`user:${userId}`, 'notification:new', {
+  emitToSocket(`admin:${userId}`, 'notification:new', {
     id: notification.id,
     userId: notification.userId,
     tipe: notification.tipe,
     pesan: notification.pesan,
+    referensiId: notification.referensiId,
     isRead: notification.isRead,
     createdAt: notification.createdAt,
   });
