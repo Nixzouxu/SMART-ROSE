@@ -65,6 +65,68 @@ router.post('/ask', validate(askChatbotSchema), chatbotController.askChatbotHand
  */
 router.get('/history', chatbotController.getChatbotHistoryHandler);
 
+/**
+ * @openapi
+ * /chatbot/pertanyaan/{id}:
+ *   get:
+ *     summary: Ambil detail pertanyaan chatbot (Untuk Admin)
+ *     tags: [Chatbot]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil detail pertanyaan
+ *       404:
+ *         description: Pertanyaan tidak ditemukan
+ */
+router.get(
+  '/pertanyaan/:id',
+  requireRole(['ADMIN', 'ADMIN_UTAMA']),
+  chatbotController.getChatbotQuestionHandler,
+);
+
+/**
+ * @openapi
+ * /chatbot/pertanyaan/{id}/jawab:
+ *   post:
+ *     summary: Jawab pertanyaan chatbot yang dieskalasi
+ *     tags: [Chatbot]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jawaban
+ *             properties:
+ *               jawaban:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Berhasil menjawab pertanyaan
+ */
+router.post(
+  '/pertanyaan/:id/jawab',
+  requireRole(['ADMIN', 'ADMIN_UTAMA']),
+  validate(answerLogSchema),
+  chatbotController.answerChatbotQuestionHandler,
+);
+
 // ========================================================
 // RUTE ADMIN
 // ========================================================
