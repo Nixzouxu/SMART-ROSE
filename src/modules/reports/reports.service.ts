@@ -4,6 +4,8 @@ import { generateTrackingNumber } from './trackingNumber.util';
 import { ApiError } from '@/utils/apiError';
 import { encryptText, decryptText } from '@/utils/encryption';
 import { refreshAttachmentUrls } from './attachment.helper';
+import { createNotification } from '@/modules/notifications/notifications.service';
+import { logger } from '@/utils/logger';
 
 // Fungsi bantuan untuk menutupi (mask) pelaporId jika laporan bersifat anonim.
 // IsAnonim pada database TIDAK menghapus pelaporId. Ini penting agar tim investigasi internal
@@ -61,6 +63,12 @@ export const createReport = async (pelaporId: string | null, data: CreateReportI
 
   const report = await db.report.create({ data: reportData });
 
+  if (finalStatus === 'SUBMITTED') {
+    await notifyAdminsOnNewReport(report).catch((err) => {
+      logger.error({ err, reportId: report.id }, 'Gagal mengirim notifikasi laporan baru');
+    });
+  }
+
   return maskAnonimReport(report);
 };
 
@@ -100,6 +108,15 @@ export const updateDraftReport = async (
     where: { id: reportId },
     data: updatedData,
   });
+
+  if (data.status === 'SUBMITTED') {
+    await notifyAdminsOnNewReport(updatedReport).catch((err) => {
+      logger.error(
+        { err, reportId: updatedReport.id },
+        'Gagal mengirim notifikasi laporan baru dari update draft',
+      );
+    });
+  }
 
   return maskAnonimReport(updatedReport);
 };
@@ -200,3 +217,18 @@ export const getPublicTrackingStatus = async (trackingNumber: string) => {
 
   return report;
 };
+
+// Fungsi Helper untuk mengirim notifikasi ke semua admin
+async function notifyAdminsOnNewReport(report: any) {
+  const admins = await db.user.findMany({
+    where: { role: { in: ['ADMIN', 'ADMIN_UTAMA'] } },
+    select: { id: true },
+  });
+
+  if (admins.length > 0) {
+    const pesan = `Laporan Insiden Baru telah diajukan (${report.trackingNumber}).`;
+    await Promise.all(
+      admins.map((admin) => createNotification(admin.id, 'LAPORAN', pesan, report.id)),
+    );
+  }
+}

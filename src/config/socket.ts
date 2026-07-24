@@ -5,7 +5,7 @@
 
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { verifyAccessToken } from '@/utils/token';
+import { verifyAuthToken } from '@/middlewares/auth.middleware';
 import { logger } from '@/utils/logger';
 
 let io: SocketIOServer;
@@ -20,7 +20,7 @@ export function initSocket(httpServer: HttpServer): SocketIOServer {
   });
 
   // Middleware autentikasi Socket.io
-  io.use((socket: Socket, next) => {
+  io.use(async (socket: Socket, next) => {
     const token = socket.handshake.auth?.token as string | undefined;
 
     if (!token) {
@@ -29,14 +29,29 @@ export function initSocket(httpServer: HttpServer): SocketIOServer {
     }
 
     try {
-      const payload = verifyAccessToken(token);
+      const payload = await verifyAuthToken(token);
+
+      // Role Validation (Non-Admin)
+      if (payload.role !== 'ADMIN' && payload.role !== 'ADMIN_UTAMA') {
+        logger.warn(`[Socket.io] Koneksi ditolak: user ${payload.userId} bukan admin`);
+        return next(new Error('Autentikasi gagal: Socket ini khusus untuk admin'));
+      }
+
       // Simpan payload ke socket.data supaya bisa diakses di event handler
       socket.data.userId = payload.userId;
       socket.data.role = payload.role;
       next();
-    } catch {
-      logger.warn('[Socket.io] Koneksi ditolak: token tidak valid');
-      next(new Error('Autentikasi gagal: token tidak valid atau kadaluarsa'));
+    } catch (err) {
+      logger.warn(
+        `[Socket.io] Koneksi ditolak: ${err instanceof Error ? err.message : 'token tidak valid'}`,
+      );
+      next(
+        new Error(
+          err instanceof Error
+            ? err.message
+            : 'Autentikasi gagal: token tidak valid atau kadaluarsa',
+        ),
+      );
     }
   });
 
@@ -44,18 +59,12 @@ export function initSocket(httpServer: HttpServer): SocketIOServer {
     const userId: string = socket.data.userId as string;
     const role: string = socket.data.role as string;
 
-    // Setiap user join room personal
-    void socket.join(`user:${userId}`);
-    logger.info(`[Socket.io] User ${userId} (${role}) terhubung, join room user:${userId}`);
-
-    // Admin join room admins
-    if (role === 'ADMIN' || role === 'ADMIN_UTAMA') {
-      void socket.join('admins');
-      logger.info(`[Socket.io] User ${userId} (${role}) join room admins`);
-    }
+    // Join room khusus admin
+    void socket.join(`admin:${userId}`);
+    logger.info(`[Socket.io] Admin ${userId} (${role}) terhubung, join room admin:${userId}`);
 
     socket.on('disconnect', (reason) => {
-      logger.info(`[Socket.io] User ${userId} terputus: ${reason}`);
+      logger.info(`[Socket.io] Admin ${userId} terputus: ${reason}`);
     });
   });
 
