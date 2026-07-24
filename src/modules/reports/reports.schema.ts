@@ -51,6 +51,11 @@ export const createReportPublicSchema = z.object({
       .enum(['SANGAT_RINGAN', 'RINGAN', 'SEDANG', 'BERAT', 'SANGAT_BERAT'])
       .optional(),
     apakahKejadianSerupaPernahTerjadi: z.boolean().optional(),
+    kejadianSerupaDetail: z.string().optional(),
+    tindakanDilakukan: z.string().optional(),
+    tindakanDilakukanOleh: z.string().optional(),
+    akarPenyebab: z.string().optional(),
+    rekomendasi: z.string().optional(),
   }),
 });
 
