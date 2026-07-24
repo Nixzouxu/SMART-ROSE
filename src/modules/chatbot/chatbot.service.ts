@@ -82,6 +82,7 @@ export const askChatbot = async (userId: string | null, pertanyaan: string) => {
       admin.id,
       'CHATBOT', // Menggunakan CHATBOT karena ini eskalasi chatbot
       pesanNotifikasi,
+      log.id, // referensiId
     );
   }
 
@@ -136,6 +137,7 @@ export const answerChatbotLog = async (logId: string, adminId: string, jawaban: 
       updatedLog.userId,
       'CHATBOT',
       `Pertanyaan Anda telah dijawab oleh Admin.`,
+      updatedLog.id, // referensiId
     );
   }
 
@@ -156,4 +158,84 @@ export const getChatbotHistory = async (userId: string, page: number = 1, limit:
   ]);
 
   return { total, logs, page, limit };
+};
+
+export const getChatbotQuestion = async (logId: string) => {
+  const log = await db.chatbotLog.findUnique({
+    where: { id: logId },
+    include: {
+      user: { select: { nama: true } },
+    },
+  });
+
+  if (!log) {
+    throw new ApiError(404, 'Pertanyaan tidak ditemukan');
+  }
+
+  // Sesuai permintaan FE: petakan statusEskalasi ke status FE
+  let mappedStatus = '';
+  if (log.statusEskalasi === 'MENUNGGU_ADMIN') {
+    mappedStatus = 'BELUM_TERJAWAB';
+  } else if (log.statusEskalasi === 'DIJAWAB_ADMIN') {
+    mappedStatus = 'TERJAWAB';
+  } else if (log.statusEskalasi === 'TERJAWAB_OTOMATIS') {
+    // Endpoint ini tidak seharusnya dipanggil untuk pertanyaan yang sudah terjawab otomatis
+    throw new ApiError(400, 'Pertanyaan ini bukan merupakan eskalasi ke Admin (TERJAWAB_OTOMATIS)');
+  }
+
+  return {
+    id: log.id,
+    pertanyaan: log.pertanyaan,
+    namaUser: log.user ? log.user.nama : 'Anonim',
+    createdAt: log.createdAt,
+    status: mappedStatus,
+  };
+};
+
+export const answerChatbotQuestion = async (logId: string, adminId: string, jawaban: string) => {
+  const log = await db.chatbotLog.findUnique({ where: { id: logId } });
+  if (!log) {
+    throw new ApiError(404, 'Pertanyaan tidak ditemukan');
+  }
+
+  if (log.statusEskalasi === 'DIJAWAB_ADMIN') {
+    throw new ApiError(400, 'Pertanyaan ini sudah dijawab');
+  }
+
+  if (log.statusEskalasi !== 'MENUNGGU_ADMIN') {
+    throw new ApiError(400, 'Pertanyaan tidak dalam status menunggu jawaban admin');
+  }
+
+  // Gunakan satu transaksi untuk memastikan konsistensi (Langkah 3 poin 1-3)
+  const [updatedLog, newKnowledge] = await db.$transaction([
+    // 1 & 2. Simpan jawaban dan ubah status jadi TERJAWAB
+    db.chatbotLog.update({
+      where: { id: logId },
+      data: {
+        jawaban,
+        statusEskalasi: 'DIJAWAB_ADMIN',
+      },
+    }),
+    // 3. Masukkan pasangan pertanyaan-jawaban ke knowledge base
+    db.chatbotKnowledge.create({
+      data: {
+        pertanyaan: log.pertanyaan,
+        jawaban,
+        kategori: 'UMUM',
+        kataKunci: [],
+      },
+    }),
+  ]);
+
+  // 4. Kirim notifikasi ke user yang bertanya (kalau teridentifikasi)
+  if (updatedLog.userId) {
+    await createNotification(
+      updatedLog.userId,
+      'CHATBOT',
+      `Pertanyaan Anda telah dijawab oleh Admin.`,
+      updatedLog.id,
+    );
+  }
+
+  return updatedLog;
 };

@@ -97,3 +97,41 @@ export const getChatbotHistoryHandler = async (req: Request, res: Response, next
     next(error);
   }
 };
+
+export const getChatbotQuestionHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const result = await chatbotService.getChatbotQuestion(id as string);
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const answerChatbotQuestionHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const { jawaban } = req.body;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adminId = (req as any).user?.userId as string;
+
+    const result = await chatbotService.answerChatbotQuestion(id as string, adminId, jawaban);
+
+    res.status(200).json({
+      success: true,
+      message: 'Berhasil menjawab pertanyaan chatbot',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
