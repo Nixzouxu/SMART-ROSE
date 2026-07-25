@@ -161,3 +161,9 @@ export const adminListReportsQuerySchema = z.object({
     endDate: z.coerce.date().optional(),
   }),
 });
+
+export const adminSearchReportsQuerySchema = z.object({
+  query: z.object({
+    q: z.string().trim().min(1, 'Query pencarian tidak boleh kosong'),
+  }),
+});
