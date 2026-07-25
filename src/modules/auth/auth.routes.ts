@@ -12,6 +12,7 @@ import {
 import * as authController from './auth.controller';
 import * as passwordController from './password.controller';
 import * as profileController from './profile.controller';
+import { uploadProfilePhotoMiddleware, validateMagicBytes } from '@/middlewares/upload.middleware';
 
 const router = Router();
 
@@ -238,6 +239,38 @@ router.post('/password/reset', validate(resetPasswordSchema), passwordController
  *         description: Unauthorized
  */
 router.get('/profile', authenticate, profileController.getMe);
+
+/**
+ * @openapi
+ * /auth/profile/photo:
+ *   post:
+ *     summary: Upload profile photo
+ *     tags: [Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Profile photo uploaded successfully
+ *       400:
+ *         description: Invalid file
+ */
+router.post(
+  '/profile/photo',
+  authenticate,
+  uploadProfilePhotoMiddleware.single('photo'),
+  validateMagicBytes(['image/jpeg', 'image/png', 'image/webp']),
+  profileController.uploadPhoto,
+);
 
 /**
  * @openapi
