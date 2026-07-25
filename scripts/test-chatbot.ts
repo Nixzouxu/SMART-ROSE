@@ -14,7 +14,7 @@ async function runTest() {
   };
 
   console.log('\n1. Mengirim pertanyaan aneh ke chatbot publik...');
-  const randomQ = `Zyxwvuts Mxyzptlk terbang ke bulan? ${Date.now()}`;
+  const randomQ = `Pertanyaan random ${require('crypto').randomUUID()}`;
   const askRes = await fetch(API_URL + '/chatbot/public/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

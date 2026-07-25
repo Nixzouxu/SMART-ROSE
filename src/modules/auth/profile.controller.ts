@@ -6,6 +6,7 @@ import { comparePassword, hashPassword } from '@/utils/password';
 import { getStorageProvider } from '@/modules/storage/storage.factory';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { logger } from '@/utils/logger';
 
 export const getMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -168,7 +169,13 @@ export const uploadPhoto = async (req: AuthRequest, res: Response, next: NextFun
 
     const storageProvider = getStorageProvider();
 
-    const ext = path.extname(req.file.originalname);
+    // Map allowed mimetypes to extensions
+    const mimeToExt: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+    };
+    const ext = mimeToExt[req.file.mimetype] || '.bin';
     const objectPath = `users/${userId}/profile/${randomUUID()}${ext}`;
 
     // Upload first
@@ -180,7 +187,7 @@ export const uploadPhoto = async (req: AuthRequest, res: Response, next: NextFun
         await storageProvider.delete(user.fotoProfilPath);
       } catch (err) {
         // Log error but don't fail the request
-        console.error('Failed to delete old profile photo:', err);
+        logger.error({ err }, 'Failed to delete old profile photo');
       }
     }
 
