@@ -155,51 +155,62 @@ export const createAdminUser = async (req: Request, res: Response, next: NextFun
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
     const role = req.query.role as string;
+    const search = req.query.search as string;
 
-    const skip = (page - 1) * limit;
     const where: Prisma.UserWhereInput = {};
-    if (role) {
-      if (!['ADMIN', 'ADMIN_UTAMA', 'USER'].includes(role)) {
-        throw new ApiError(400, 'Nilai role tidak valid');
-      }
-      where.role = role as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    if (search) {
+      where.OR = [
+        { nama: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
-    const [total, users] = await Promise.all([
-      db.user.count({ where }),
-      db.user.findMany({
+    if (role === 'ADMIN') {
+      where.role = 'ADMIN';
+      where.statusVerifikasi = 'APPROVED';
+      where.aktif = true;
+
+      const users = await db.user.findMany({
         where,
-        skip,
-        take: limit,
         select: {
           id: true,
           nama: true,
-          email: true,
-          noPegawai: true,
-          role: true,
-          unitKerja: true,
-          statusVerifikasi: true,
-          aktif: true,
-          createdAt: true,
         },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+        orderBy: { nama: 'asc' },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Daftar admin berhasil diambil',
+        data: users,
+      });
+    }
+
+    if (role && role !== 'ADMIN') {
+      where.role = role as any;
+    }
+
+    const users = await db.user.findMany({
+      where,
+      select: {
+        id: true,
+        nama: true,
+        email: true,
+        role: true,
+        unitKerja: true,
+        statusVerifikasi: true,
+        aktif: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
     res.status(200).json({
       success: true,
       message: 'Daftar pengguna berhasil diambil',
-      data: {
-        users,
-        pagination: {
-          page,
-          limit,
-          total,
-        },
-      },
+      data: users,
     });
   } catch (error) {
     next(error);

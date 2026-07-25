@@ -2078,6 +2078,43 @@
             "description": "Forbidden (Not ADMIN_UTAMA)"
           }
         }
+      },
+      "get": {
+        "summary": "Get list of users (Admin)",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ADMIN"
+              ]
+            },
+            "description": "Filter by role"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by name or email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
       }
     },
     "/admin/users/{id}/approve": {

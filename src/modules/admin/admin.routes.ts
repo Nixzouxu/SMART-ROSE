@@ -91,7 +91,7 @@ router.post(
   userManagementController.createAdminUser,
 );
 
-router.get('/users', requireRole(['ADMIN_UTAMA']), userManagementController.getAllUsers);
+router.get('/users', requireRole(['ADMIN', 'ADMIN_UTAMA']), userManagementController.getAllUsers);
 
 router.patch(
   '/users/:id',
