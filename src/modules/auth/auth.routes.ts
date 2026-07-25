@@ -8,6 +8,7 @@ import {
   verifyOtpSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
 } from './auth.schema';
 import * as authController from './auth.controller';
 import * as passwordController from './password.controller';
@@ -297,7 +298,7 @@ router.post(
  *       401:
  *         description: Unauthorized
  */
-router.put('/profile', authenticate, profileController.updateMe);
+router.put('/profile', authenticate, validate(updateProfileSchema), profileController.updateMe);
 
 /**
  * @openapi
