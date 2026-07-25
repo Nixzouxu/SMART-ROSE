@@ -108,10 +108,16 @@ export const updateDraftReport = async (req: AuthRequest, res: Response, next: N
 
 export const deleteDraftReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user!.userId;
-    const id = req.params.id as string as string;
+    return res.status(503).json({
+      success: false,
+      message: 'Fitur hapus draft sedang dalam perbaikan darurat, coba lagi nanti.',
+    });
+    /*
+    const userId = req.user!.id;
+    const id = req.params.id as string;
 
     await reportsService.deleteDraftReport(userId, id);
+    */
 
     res.status(200).json({
       success: true,

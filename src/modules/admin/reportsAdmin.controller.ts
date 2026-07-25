@@ -262,6 +262,11 @@ export const assignReport = async (req: AuthRequest, res: Response, next: NextFu
 
 export const archiveReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    return res.status(503).json({
+      success: false,
+      message: 'Fitur arsip sedang dalam perbaikan darurat, coba lagi nanti.',
+    });
+    /*
     const adminId = req.user!.userId;
     const id = req.params.id as string;
 
@@ -296,6 +301,7 @@ export const archiveReport = async (req: AuthRequest, res: Response, next: NextF
     await db.report.delete({
       where: { id },
     });
+    */
 
     res.status(200).json({
       success: true,
