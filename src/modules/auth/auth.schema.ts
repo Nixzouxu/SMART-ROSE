@@ -44,3 +44,10 @@ export const verifyOtpSchema = z.object({
     otp: z.string().length(6, 'OTP harus 6 digit'),
   }),
 });
+
+export const updateProfileSchema = z.object({
+  body: z.object({
+    nama: z.string().min(3, 'Nama minimal 3 karakter').optional(),
+    unitKerja: z.string().min(1, 'Unit kerja wajib diisi').optional(),
+  }),
+});
