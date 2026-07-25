@@ -1,4 +1,4 @@
-﻿import { db } from '../src/config/db';
+import { db } from '../src/config/db';
 import { signAccessToken } from '../src/utils/token';
 
 const API_URL = 'http://localhost:4000/api';
@@ -7,7 +7,7 @@ async function runTest() {
   console.log('--- STARTING CHATBOT ADMIN VALIDATION TEST ---');
 
   let admin = await db.user.findFirst({ where: { role: 'ADMIN' } });
-  const adminToken = signAccessToken({ userId: admin.id, role: admin.role });
+  const adminToken = signAccessToken({ userId: admin!.id, role: admin!.role });
   const adminHeaders = { 
     'Authorization': 'Bearer ' + adminToken,
     'Content-Type': 'application/json'

@@ -63,6 +63,7 @@ export const listReports = async (req: AuthRequest, res: Response, next: NextFun
           };
           if (r.isAnonim) {
             delete mapped.pelapor;
+            mapped.pelaporId = null;
           }
           return mapped;
         }),
@@ -114,6 +115,7 @@ export const getReportDetail = async (req: AuthRequest, res: Response, next: Nex
     };
     if (report.isAnonim) {
       delete mapped.pelapor;
+      mapped.pelaporId = null;
     }
 
     res.status(200).json({
