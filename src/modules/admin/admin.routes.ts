@@ -10,6 +10,7 @@ import {
   adminListReportsQuerySchema,
   createReportSchema,
   adminUpdateReportSchema,
+  adminSearchReportsQuerySchema,
 } from '@/modules/reports/reports.schema';
 import { regradeReportSchema } from './regrade.schema';
 import { confirmPasswordMiddleware } from '@/middlewares/confirmPassword.middleware';
@@ -240,6 +241,33 @@ router.get('/reports/export', reportsAdminController.exportReports);
  *         description: List of reports
  */
 router.get('/reports', validate(adminListReportsQuerySchema), reportsAdminController.listReports);
+
+/**
+ * @openapi
+ * /admin/reports/search:
+ *   get:
+ *     summary: Search reports by trackingNumber, namaFasilitas, or unitKerja
+ *     tags: [Admin Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Search results
+ *       400:
+ *         description: Query q kosong
+ */
+router.get(
+  '/reports/search',
+  validate(adminSearchReportsQuerySchema),
+  reportsAdminController.searchReports,
+);
+
 /**
  * @openapi
  * /admin/reports/{id}:

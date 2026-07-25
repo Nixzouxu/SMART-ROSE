@@ -406,3 +406,55 @@ export const exportReports = async (req: AuthRequest, res: Response, next: NextF
     next(error);
   }
 };
+
+export const searchReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { q } = req.query as { q: string };
+
+    const searchCondition = {
+      OR: [
+        { trackingNumber: { contains: q, mode: 'insensitive' as const } },
+        { namaFasilitas: { contains: q, mode: 'insensitive' as const } },
+        { unitKerja: { contains: q, mode: 'insensitive' as const } },
+      ],
+    };
+
+    const [total, reports] = await Promise.all([
+      db.report.count({
+        where: searchCondition,
+      }),
+      db.report.findMany({
+        where: searchCondition,
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: {
+          pelapor: {
+            select: { id: true, nama: true, email: true, unitKerja: true },
+          },
+        },
+      }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: 'Berhasil mencari laporan',
+      data: {
+        total,
+        results: reports.map((r) => {
+          const mapped: Record<string, any> = {
+            ...r,
+            kronologi: r.kronologi ? decryptText(r.kronologi) : r.kronologi,
+            namaPelapor: r.isAnonim ? null : r.pelapor?.nama || null,
+          };
+          if (r.isAnonim) {
+            delete mapped.pelapor;
+            mapped.pelaporId = null;
+          }
+          return mapped;
+        }),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
