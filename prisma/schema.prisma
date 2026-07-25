@@ -217,6 +217,16 @@ model Report {
   akarPenyebab                      String?                  @map("akar_penyebab")
   rekomendasi                       String?                  @map("rekomendasi")
 
+  kategoriFasilitas                 String?                  @map("kategori_fasilitas")
+  namaFasilitas                     String?                  @map("nama_fasilitas")
+  kodeInventaris                    String?                  @map("kode_inventaris")
+  kondisiFasilitas                  String?                  @map("kondisi_fasilitas")
+  penanggungJawabFasilitas          String?                  @map("penanggung_jawab_fasilitas")
+  adaKorban                         Boolean?                 @map("ada_korban")
+  kategoriKerusakan                 String?                  @map("kategori_kerusakan")
+  statusPenangananAwal              String?                  @map("status_penanganan_awal")
+  tindakanDarurat                   String?                  @map("tindakan_darurat") @db.Text
+
   catatanInvestigasi  String?   @map("catatan_investigasi") @db.Text
   deadlineInvestigasi DateTime? @map("deadline_investigasi")
   assignedToId        String?   @map("assigned_to_id")
