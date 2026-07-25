@@ -20,6 +20,10 @@ export const verifyAuthToken = async (token: string): Promise<TokenPayload> => {
       throw new ApiError(401, 'Autentikasi gagal: User tidak ditemukan');
     }
 
+    if (!user.aktif || user.deletedAt !== null) {
+      throw new ApiError(401, 'Autentikasi gagal: Akun telah dinonaktifkan atau dihapus');
+    }
+
     if (user.statusVerifikasi !== 'APPROVED') {
       throw new ApiError(403, 'Akses ditolak: Akun belum diverifikasi');
     }
