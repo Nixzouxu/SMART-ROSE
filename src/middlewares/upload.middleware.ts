@@ -59,6 +59,21 @@ export const uploadRcaMiddleware = multer({
   },
 });
 
+export const uploadProfilePhotoMiddleware = multer({
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+  },
+  fileFilter: (req, file, cb) => {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      return cb(
+        new ApiError(400, 'Tipe file tidak diizinkan. Hanya menerima jpg, png, atau webp.'),
+      );
+    }
+    cb(null, true);
+  },
+});
+
 /**
  * Factory untuk membuat middleware validasi magic bytes dengan whitelist spesifik.
  * Mencegah pemalsuan ekstensi/mimetype: memverifikasi isi file asli, bukan

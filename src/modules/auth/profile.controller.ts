@@ -3,6 +3,9 @@ import { db } from '@/config/db';
 import { AuthRequest } from '@/middlewares/auth.middleware';
 import { ApiError } from '@/utils/apiError';
 import { comparePassword, hashPassword } from '@/utils/password';
+import { getStorageProvider } from '@/modules/storage/storage.factory';
+import path from 'path';
+import { randomUUID } from 'crypto';
 
 export const getMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -16,7 +19,7 @@ export const getMe = async (req: AuthRequest, res: Response, next: NextFunction)
         noPegawai: true,
         role: true,
         unitKerja: true,
-        fotoProfil: true,
+        fotoProfilPath: true,
         statusVerifikasi: true,
         createdAt: true,
         updatedAt: true,
@@ -27,9 +30,20 @@ export const getMe = async (req: AuthRequest, res: Response, next: NextFunction)
       throw new ApiError(404, 'User tidak ditemukan');
     }
 
+    let avatarUrl: string | null = null;
+    if (user.fotoProfilPath) {
+      const storageProvider = getStorageProvider();
+      avatarUrl = await storageProvider.getSignedUrl(user.fotoProfilPath);
+    }
+
+    const { fotoProfilPath, ...userWithoutPath } = user;
+
     res.status(200).json({
       success: true,
-      data: user,
+      data: {
+        ...userWithoutPath,
+        avatarUrl,
+      },
     });
   } catch (error) {
     next(error);
@@ -130,6 +144,56 @@ export const deleteProfile = async (req: AuthRequest, res: Response, next: NextF
       success: true,
       message: 'Akun berhasil dihapus',
       data: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadPhoto = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+
+    if (!req.file) {
+      throw new ApiError(400, 'File foto tidak ditemukan dalam request');
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new ApiError(404, 'User tidak ditemukan');
+    }
+
+    const storageProvider = getStorageProvider();
+
+    const ext = path.extname(req.file.originalname);
+    const objectPath = `users/${userId}/profile/${randomUUID()}${ext}`;
+
+    // Upload first
+    const result = await storageProvider.upload(objectPath, req.file.buffer, req.file.mimetype);
+
+    // After success, delete old if exists
+    if (user.fotoProfilPath) {
+      try {
+        await storageProvider.delete(user.fotoProfilPath);
+      } catch (err) {
+        // Log error but don't fail the request
+        console.error('Failed to delete old profile photo:', err);
+      }
+    }
+
+    await db.user.update({
+      where: { id: userId },
+      data: { fotoProfilPath: result.path },
+    });
+
+    const avatarUrl = await storageProvider.getSignedUrl(result.path);
+
+    res.status(201).json({
+      success: true,
+      data: { avatarUrl },
     });
   } catch (error) {
     next(error);

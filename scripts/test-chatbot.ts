@@ -14,10 +14,11 @@ async function runTest() {
   };
 
   console.log('\n1. Mengirim pertanyaan aneh ke chatbot publik...');
+  const randomQ = `Zyxwvuts Mxyzptlk terbang ke bulan? ${Date.now()}`;
   const askRes = await fetch(API_URL + '/chatbot/public/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pertanyaan: 'Zyxwvuts Mxyzptlk terbang ke bulan?' })
+    body: JSON.stringify({ pertanyaan: randomQ })
   });
   const askData = await askRes.json();
   const logId = askData.data?.logId;

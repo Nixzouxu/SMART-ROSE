@@ -160,7 +160,7 @@ model User {
   passwordHash     String           @map("password_hash")
   role             RoleType         @default(USER)
   unitKerja        String           @map("unit_kerja")
-  fotoProfil       String?          @map("foto_profil")
+  fotoProfilPath   String?          @map("foto_profil_path")
   statusVerifikasi StatusVerifikasi @default(PENDING) @map("status_verifikasi")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
