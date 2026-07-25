@@ -14,6 +14,15 @@ export const createReportSchema = z.object({
     gradingAwal: z.enum(['HIJAU', 'BIRU', 'KUNING', 'MERAH']),
     isAnonim: z.boolean().default(false),
     status: z.enum(['DRAFT', 'SUBMITTED']).default('DRAFT'),
+    kategoriFasilitas: z.string().optional(),
+    namaFasilitas: z.string().optional(),
+    kodeInventaris: z.string().optional(),
+    kondisiFasilitas: z.string().optional(),
+    penanggungJawabFasilitas: z.string().optional(),
+    adaKorban: z.boolean().optional(),
+    kategoriKerusakan: z.string().optional(),
+    statusPenangananAwal: z.string().optional(),
+    tindakanDarurat: z.string().optional(),
   }),
 });
 
@@ -56,6 +65,15 @@ export const createReportPublicSchema = z.object({
     tindakanDilakukanOleh: z.string().optional(),
     akarPenyebab: z.string().optional(),
     rekomendasi: z.string().optional(),
+    kategoriFasilitas: z.string().optional(),
+    namaFasilitas: z.string().optional(),
+    kodeInventaris: z.string().optional(),
+    kondisiFasilitas: z.string().optional(),
+    penanggungJawabFasilitas: z.string().optional(),
+    adaKorban: z.boolean().optional(),
+    kategoriKerusakan: z.string().optional(),
+    statusPenangananAwal: z.string().optional(),
+    tindakanDarurat: z.string().optional(),
   }),
 });
 
@@ -70,6 +88,15 @@ export const updateReportSchema = z.object({
     gradingAwal: z.enum(['HIJAU', 'BIRU', 'KUNING', 'MERAH']).optional(),
     isAnonim: z.boolean().optional(),
     status: z.enum(['DRAFT', 'SUBMITTED']).optional(),
+    kategoriFasilitas: z.string().optional(),
+    namaFasilitas: z.string().optional(),
+    kodeInventaris: z.string().optional(),
+    kondisiFasilitas: z.string().optional(),
+    penanggungJawabFasilitas: z.string().optional(),
+    adaKorban: z.boolean().optional(),
+    kategoriKerusakan: z.string().optional(),
+    statusPenangananAwal: z.string().optional(),
+    tindakanDarurat: z.string().optional(),
   }),
 });
 
@@ -94,6 +121,15 @@ export const adminUpdateReportSchema = z.object({
         'ARSIP',
       ])
       .optional(),
+    kategoriFasilitas: z.string().optional(),
+    namaFasilitas: z.string().optional(),
+    kodeInventaris: z.string().optional(),
+    kondisiFasilitas: z.string().optional(),
+    penanggungJawabFasilitas: z.string().optional(),
+    adaKorban: z.boolean().optional(),
+    kategoriKerusakan: z.string().optional(),
+    statusPenangananAwal: z.string().optional(),
+    tindakanDarurat: z.string().optional(),
   }),
 });
 

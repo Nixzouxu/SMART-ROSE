@@ -42,6 +42,15 @@ type CreateReportInput = {
   akarPenyebab?: string;
   rekomendasi?: string;
   kejadianSerupaDetail?: string;
+  kategoriFasilitas?: string;
+  namaFasilitas?: string;
+  kodeInventaris?: string;
+  kondisiFasilitas?: string;
+  penanggungJawabFasilitas?: string;
+  adaKorban?: boolean;
+  kategoriKerusakan?: string;
+  statusPenangananAwal?: string;
+  tindakanDarurat?: string;
 };
 
 export const createReport = async (pelaporId: string | null, data: CreateReportInput) => {
