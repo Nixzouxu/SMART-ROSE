@@ -221,7 +221,7 @@ export const updateUser = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const adminId = req.user!.userId;
     const id = req.params.id as string;
-    const { nama, email, unitKerja, aktif } = req.body;
+    const { nama, email, role, unitKerja, aktif } = req.body;
 
     if (adminId === id && aktif === false) {
       throw new ApiError(400, 'Anda tidak dapat menonaktifkan akun Anda sendiri');
@@ -237,10 +237,29 @@ export const updateUser = async (req: AuthRequest, res: Response, next: NextFunc
       throw new ApiError(400, 'Akun sistem tidak dapat diubah');
     }
 
+    let statusVerifikasi = undefined;
     if (email && email !== user.email) {
       const existingUser = await db.user.findUnique({ where: { email } });
       if (existingUser) {
         throw new ApiError(400, 'Email sudah digunakan oleh akun lain');
+      }
+      statusVerifikasi = 'PENDING';
+    }
+
+    // Validasi ADMIN_UTAMA minimal 1 aktif
+    if (user.role === 'ADMIN_UTAMA' && user.aktif === true && user.deletedAt === null) {
+      const isRoleChanged = role && role !== 'ADMIN_UTAMA';
+      const isDeactivated = aktif === false;
+      if (isRoleChanged || isDeactivated) {
+        const adminUtamaCount = await db.user.count({
+          where: { role: 'ADMIN_UTAMA', aktif: true, deletedAt: null },
+        });
+        if (adminUtamaCount <= 1) {
+          throw new ApiError(
+            400,
+            'Tidak dapat mengubah role atau menonaktifkan satu-satunya ADMIN_UTAMA yang tersisa',
+          );
+        }
       }
     }
 
@@ -249,8 +268,10 @@ export const updateUser = async (req: AuthRequest, res: Response, next: NextFunc
       data: {
         ...(nama && { nama }),
         ...(email && { email }),
+        ...(role && { role }),
         ...(unitKerja && { unitKerja }),
         ...(aktif !== undefined && { aktif }),
+        ...(statusVerifikasi && { statusVerifikasi }),
       },
       select: {
         id: true,
@@ -291,6 +312,16 @@ export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunc
     // TODO: Gunakan flag khusus (misal isSystem: true) di schema daripada hardcode email.
     if (user.email === 'system@smartrose.internal') {
       throw new ApiError(400, 'Akun sistem tidak dapat dihapus atau dinonaktifkan');
+    }
+
+    // Validasi ADMIN_UTAMA minimal 1 aktif sebelum soft-delete
+    if (user.role === 'ADMIN_UTAMA' && user.aktif === true && user.deletedAt === null) {
+      const adminUtamaCount = await db.user.count({
+        where: { role: 'ADMIN_UTAMA', aktif: true, deletedAt: null },
+      });
+      if (adminUtamaCount <= 1) {
+        throw new ApiError(400, 'Tidak dapat menghapus satu-satunya ADMIN_UTAMA yang tersisa');
+      }
     }
 
     // Gunakan soft delete agar konsisten dengan fitur lain
