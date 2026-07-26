@@ -3,12 +3,33 @@ import { AuthRequest } from '@/middlewares/auth.middleware';
 import * as reportsService from './reports.service';
 import * as captchaService from '@/modules/captcha/captcha.service';
 import { ApiError } from '@/utils/apiError';
+import { db } from '@/config/db';
+import { sendNewReportNotification } from '@/services/email.service';
 
 export const createReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.userId;
     const report = await reportsService.createReport(userId, req.body);
     res.locals.entityId = report.id;
+
+    try {
+      const admins = await db.user.findMany({
+        where: { role: { in: ['ADMIN', 'ADMIN_UTAMA'] }, aktif: true },
+        select: { email: true },
+      });
+      if (admins.length > 0) {
+        await sendNewReportNotification(
+          admins.map((a) => a.email),
+          {
+            trackingNumber: report.trackingNumber || '-',
+            unitKerja: report.unitKerja,
+            jenisInsiden: report.jenisInsiden,
+          },
+        );
+      }
+    } catch (emailError) {
+      console.error('Gagal kirim notifikasi email laporan baru:', emailError);
+    }
 
     res.status(201).json({
       success: true,
@@ -42,6 +63,25 @@ export const createReportPublic = async (req: Request, res: Response, next: Next
       status: 'SUBMITTED', // Laporan publik selalu langsung SUBMITTED
     });
     res.locals.entityId = report.id;
+
+    try {
+      const admins = await db.user.findMany({
+        where: { role: { in: ['ADMIN', 'ADMIN_UTAMA'] }, aktif: true },
+        select: { email: true },
+      });
+      if (admins.length > 0) {
+        await sendNewReportNotification(
+          admins.map((a) => a.email),
+          {
+            trackingNumber: report.trackingNumber || '-',
+            unitKerja: report.unitKerja,
+            jenisInsiden: report.jenisInsiden,
+          },
+        );
+      }
+    } catch (emailError) {
+      console.error('Gagal kirim notifikasi email laporan baru:', emailError);
+    }
 
     res.status(201).json({
       success: true,
