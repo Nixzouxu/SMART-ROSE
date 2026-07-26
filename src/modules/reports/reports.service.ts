@@ -147,8 +147,9 @@ export const deleteDraftReport = async (userId: string, reportId: string) => {
     throw new ApiError(400, 'Hanya laporan dengan status DRAFT yang bisa dihapus');
   }
 
-  await db.report.delete({
+  await db.report.update({
     where: { id: reportId },
+    data: { deletedAt: new Date() },
   });
 };
 

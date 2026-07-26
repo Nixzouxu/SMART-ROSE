@@ -13,11 +13,15 @@ export const listReports = async (req: AuthRequest, res: Response, next: NextFun
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const { status, jenisInsiden, unitKerja, startDate, endDate } = req.query;
+    const { status, jenisInsiden, unitKerja, startDate, endDate, includeArchived } = req.query;
 
     const skip = (page - 1) * limit;
 
     const where: Prisma.ReportWhereInput = {};
+
+    if (includeArchived === 'true') {
+      where.deletedAt = undefined;
+    }
 
     if (status)
       where.status = status as any; /* eslint-disable-line @typescript-eslint/no-explicit-any */
@@ -262,11 +266,6 @@ export const assignReport = async (req: AuthRequest, res: Response, next: NextFu
 
 export const archiveReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    return res.status(503).json({
-      success: false,
-      message: 'Fitur arsip sedang dalam perbaikan darurat, coba lagi nanti.',
-    });
-    /*
     const adminId = req.user!.userId;
     const id = req.params.id as string;
 
@@ -284,24 +283,13 @@ export const archiveReport = async (req: AuthRequest, res: Response, next: NextF
       },
     });
 
-    // Soft delete is handled by Prisma extension if we call delete, but here we just update status to ARSIP
-    // The requirement says "soft delete, ubah status ke ARSIP"
-    // Since we have soft delete extension on DB level, calling delete() will set deletedAt and hide it from normal queries.
-    // If we want it to still be queryable as 'ARSIP', we might just update status and let Prisma soft-delete it.
-    // However, if Prisma soft-delete hides it from findMany, we might not want to delete() it.
-    // Let's explicitly set status to ARSIP and use delete() to trigger soft-delete.
-
-    // Update status to ARSIP first
     await db.report.update({
       where: { id },
-      data: { status: 'ARSIP' },
+      data: {
+        status: 'ARSIP',
+        deletedAt: new Date(),
+      },
     });
-
-    // Soft delete
-    await db.report.delete({
-      where: { id },
-    });
-    */
 
     res.status(200).json({
       success: true,
