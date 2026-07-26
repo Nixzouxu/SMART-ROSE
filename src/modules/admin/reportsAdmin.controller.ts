@@ -8,6 +8,7 @@ import { regradeReport } from './regrade.service';
 import { generateMassReportExcel, generateMassReportPdf } from '@/modules/reports/export.service';
 import { decryptText, encryptText } from '@/utils/encryption';
 import { refreshAttachmentUrls } from '@/modules/reports/attachment.helper';
+import { sendStatusChangeNotification, sendAssignmentNotification } from '@/services/email.service';
 
 export const listReports = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -151,12 +152,27 @@ export const createManualReport = async (req: AuthRequest, res: Response, next: 
         pelaporId: userId,
         trackingNumber,
       },
+      include: {
+        pelapor: {
+          select: { id: true, nama: true, email: true, unitKerja: true },
+        },
+      },
     });
+
+    const mappedReport: Record<string, any> = {
+      ...report,
+      kronologi: report.kronologi ? decryptText(report.kronologi) : report.kronologi,
+      namaPelapor: report.isAnonim ? null : report.pelapor?.nama || null,
+    };
+    if (report.isAnonim) {
+      delete mappedReport.pelapor;
+      mappedReport.pelaporId = null;
+    }
 
     res.status(201).json({
       success: true,
       message: 'Laporan manual berhasil dibuat',
-      data: report,
+      data: mappedReport,
     });
   } catch (error) {
     next(error);
@@ -201,15 +217,56 @@ export const updateReport = async (req: AuthRequest, res: Response, next: NextFu
     const updatedReport = await db.report.update({
       where: { id },
       data: updatedData,
+      include: {
+        pelapor: {
+          select: { id: true, nama: true, email: true, unitKerja: true },
+        },
+      },
     });
+
+    // Kirim notifikasi kalau status berubah dan pelapor bukan anonim
+    if (
+      updateData.status &&
+      updateData.status !== existingReport.status &&
+      existingReport.pelaporId &&
+      !existingReport.isAnonim
+    ) {
+      try {
+        const pelapor = await db.user.findUnique({
+          where: { id: existingReport.pelaporId },
+          select: { email: true },
+        });
+        if (pelapor?.email) {
+          await sendStatusChangeNotification(pelapor.email, {
+            trackingNumber: trackingNumber || existingReport.trackingNumber || '-',
+            statusLama: existingReport.status,
+            statusBaru: updateData.status,
+          });
+        }
+      } catch (emailError) {
+        console.error('Gagal kirim notifikasi perubahan status:', emailError);
+      }
+    }
 
     req.body.reportId = existingReport.id;
     req.body.trackingNumber = trackingNumber || existingReport.trackingNumber;
 
+    const mappedUpdatedReport: Record<string, any> = {
+      ...updatedReport,
+      kronologi: updatedReport.kronologi
+        ? decryptText(updatedReport.kronologi)
+        : updatedReport.kronologi,
+      namaPelapor: updatedReport.isAnonim ? null : updatedReport.pelapor?.nama || null,
+    };
+    if (updatedReport.isAnonim) {
+      delete mappedUpdatedReport.pelapor;
+      mappedUpdatedReport.pelaporId = null;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Laporan berhasil diupdate',
-      data: updatedReport,
+      data: mappedUpdatedReport,
     });
   } catch (error) {
     next(error);
@@ -250,14 +307,32 @@ export const assignReport = async (req: AuthRequest, res: Response, next: NextFu
       where: { id },
       data: { assignedToId },
       include: {
-        assignedTo: { select: { id: true, nama: true } },
+        assignedTo: { select: { id: true, nama: true, email: true } },
       },
     });
+
+    // Kirim notifikasi ke admin yang di-assign
+    if (assignedToId && updatedReport.assignedTo?.email) {
+      try {
+        await sendAssignmentNotification(updatedReport.assignedTo.email, {
+          trackingNumber: existingReport.trackingNumber || '-',
+          unitKerja: existingReport.unitKerja,
+        });
+      } catch (emailError) {
+        console.error('Gagal kirim notifikasi assignment:', emailError);
+      }
+    }
+    const mappedAssignedReport: Record<string, any> = {
+      ...updatedReport,
+      kronologi: updatedReport.kronologi
+        ? decryptText(updatedReport.kronologi)
+        : updatedReport.kronologi,
+    };
 
     res.status(200).json({
       success: true,
       message: 'Admin penanggung jawab berhasil ditugaskan',
-      data: updatedReport,
+      data: mappedAssignedReport,
     });
   } catch (error) {
     next(error);
@@ -308,11 +383,6 @@ export const hardDeleteReport = async (req: AuthRequest, res: Response, next: Ne
     // TODO: Middleware confirmPassword akan ditambahkan di Fase 7
     // untuk mengunci endpoint ini lebih lanjut.
     // Saat ini cukup dilindungi oleh requireRole('ADMIN_UTAMA') pada router.
-
-    // Bypass soft delete dengan menghapus langsung dari raw query atau membiarkan Prisma jika tidak dihalangi extension
-    // Prisma client with soft delete extension overrides delete() and deleteMany().
-    // We can bypass it by using raw SQL, or updating the extension logic.
-    // Let's use raw SQL to hard delete the report.
 
     await db.$executeRawUnsafe(`DELETE FROM reports WHERE id = $1`, id);
 
