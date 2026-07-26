@@ -24,6 +24,10 @@ export const verifyAuthToken = async (token: string): Promise<TokenPayload> => {
       throw new ApiError(401, 'Autentikasi gagal: Akun telah dinonaktifkan atau dihapus');
     }
 
+    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+      throw new ApiError(401, 'Sesi tidak valid, silakan login kembali');
+    }
+
     if (user.statusVerifikasi !== 'APPROVED') {
       throw new ApiError(403, 'Akses ditolak: Akun belum diverifikasi');
     }

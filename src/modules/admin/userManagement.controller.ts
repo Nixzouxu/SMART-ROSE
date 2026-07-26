@@ -5,6 +5,7 @@ import { ApiError } from '@/utils/apiError';
 import { hashPassword } from '@/utils/password';
 import { AuthRequest } from '@/middlewares/auth.middleware';
 import { Prisma } from '@prisma/client';
+import { sendEmailChangedNotification } from '@/services/email.service';
 
 export const getPendingUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -237,13 +238,19 @@ export const updateUser = async (req: AuthRequest, res: Response, next: NextFunc
       throw new ApiError(400, 'Akun sistem tidak dapat diubah');
     }
 
-    let statusVerifikasi = undefined;
+    let emailChanged = false;
+    let oldEmail = '';
     if (email && email !== user.email) {
       const existingUser = await db.user.findUnique({ where: { email } });
       if (existingUser) {
         throw new ApiError(400, 'Email sudah digunakan oleh akun lain');
       }
-      statusVerifikasi = 'PENDING';
+      emailChanged = true;
+      oldEmail = user.email;
+    }
+
+    if (adminId === id && role && role !== user.role) {
+      throw new ApiError(400, 'Tidak bisa mengubah role akun sendiri');
     }
 
     // Validasi ADMIN_UTAMA minimal 1 aktif
@@ -271,19 +278,31 @@ export const updateUser = async (req: AuthRequest, res: Response, next: NextFunc
         ...(role && { role }),
         ...(unitKerja && { unitKerja }),
         ...(aktif !== undefined && { aktif }),
-        ...(statusVerifikasi && { statusVerifikasi }),
+        ...(emailChanged && { tokenVersion: { increment: 1 } }),
       },
       select: {
         id: true,
         nama: true,
         email: true,
-        noPegawai: true,
         role: true,
         unitKerja: true,
         statusVerifikasi: true,
         aktif: true,
+        createdAt: true,
       },
     });
+
+    if (emailChanged) {
+      try {
+        await sendEmailChangedNotification({
+          oldEmail,
+          newEmail: updatedUser!.email,
+          nama: updatedUser!.nama,
+        });
+      } catch (err) {
+        console.error('Gagal mengirim notifikasi email berubah', err);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -327,7 +346,7 @@ export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunc
     // Gunakan soft delete agar konsisten dengan fitur lain
     await db.user.update({
       where: { id },
-      data: { deletedAt: new Date(), aktif: false },
+      data: { deletedAt: new Date(), aktif: false, tokenVersion: { increment: 1 } },
     });
 
     await db.auditLog.create({
