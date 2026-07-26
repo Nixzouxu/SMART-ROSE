@@ -105,7 +105,7 @@ router.patch(
 
 router.delete(
   '/users/:id',
-  requireRole(['ADMIN_UTAMA', 'ADMIN']),
+  requireRole(['ADMIN_UTAMA']),
   validate(deleteUserSchema),
   userManagementController.deleteUser,
 );
