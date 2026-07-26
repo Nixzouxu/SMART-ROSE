@@ -87,7 +87,7 @@ export const loginStepOne = async (identifier: string, password: string, deviceT
             email: user.email,
             msg: 'Login via trusted device, OTP skipped',
           });
-          return await issueTokens(user.id, user.role);
+          return await issueTokens(user.id, user.role, user.tokenVersion);
         }
       } catch (error) {
         logger.error({ userId: user.id, error }, 'Error validating trusted device');
@@ -102,7 +102,7 @@ export const loginStepOne = async (identifier: string, password: string, deviceT
   }
 
   // Jika USER biasa, langsung generate token
-  return await issueTokens(user.id, user.role);
+  return await issueTokens(user.id, user.role, user.tokenVersion);
 };
 
 export const loginStepTwoOtp = async (
@@ -153,12 +153,12 @@ export const loginStepTwoOtp = async (
     }
   }
 
-  const tokens = await issueTokens(user.id, user.role);
+  const tokens = await issueTokens(user.id, user.role, user.tokenVersion);
   return { ...tokens, deviceToken: newDeviceToken };
 };
 
-export const issueTokens = async (userId: string, role: string) => {
-  const payload = { userId, role };
+export const issueTokens = async (userId: string, role: string, tokenVersion: number) => {
+  const payload = { userId, role, tokenVersion };
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
 
@@ -196,7 +196,7 @@ export const refreshAccessToken = async (userId: string, token: string) => {
     throw new ApiError(401, 'User tidak valid atau belum diverifikasi');
   }
 
-  const payload = { userId: user.id, role: user.role };
+  const payload = { userId: user.id, role: user.role, tokenVersion: user.tokenVersion };
   const newAccessToken = signAccessToken(payload);
 
   return { accessToken: newAccessToken };

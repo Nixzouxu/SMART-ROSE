@@ -85,3 +85,36 @@ export async function sendAssignmentNotification(
     html,
   });
 }
+
+export async function sendEmailChangedNotification({
+  oldEmail,
+  newEmail,
+  nama,
+}: {
+  oldEmail: string;
+  newEmail: string;
+  nama: string;
+}) {
+  const html = baseTemplate(
+    'Email Akun Anda Telah Diubah',
+    `<p>Halo ${nama},</p>
+     <p>Email akun Anda telah berhasil diubah menjadi: <b>${newEmail}</b>.</p>
+     <p>Sebagai langkah keamanan, semua sesi login lama Anda telah diakhiri (invalidated). Silakan login kembali menggunakan email baru Anda.</p>
+     <p>Jika Anda tidak merasa melakukan perubahan ini, segera hubungi Admin Utama.</p>`,
+  );
+
+  return Promise.all([
+    resend.emails.send({
+      from: FROM,
+      to: oldEmail,
+      subject: '🔐 [SMART-ROSE] Email Akun Anda Telah Diubah',
+      html,
+    }),
+    resend.emails.send({
+      from: FROM,
+      to: newEmail,
+      subject: '🔐 [SMART-ROSE] Email Akun Anda Telah Diubah',
+      html,
+    }),
+  ]);
+}
