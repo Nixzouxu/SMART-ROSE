@@ -17,13 +17,36 @@ import { uploadProfilePhotoMiddleware, validateMagicBytes } from '@/middlewares/
 
 const router = Router();
 
-// Rate limiter khusus login (maksimal 5 percobaan per 15 menit per IP)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50,
   message: {
     success: false,
     message: 'Terlalu banyak percobaan login dari IP ini, silakan coba lagi setelah 15 menit',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {
+    success: false,
+    message:
+      'Terlalu banyak permintaan reset password dari IP ini, silakan coba lagi setelah 15 menit',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message:
+      'Terlalu banyak percobaan reset password dari IP ini, silakan coba lagi setelah 15 menit',
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -188,7 +211,12 @@ router.post('/logout', authenticate, authController.logout);
  *       404:
  *         description: User not found
  */
-router.post('/password/forgot', validate(forgotPasswordSchema), passwordController.forgotPassword);
+router.post(
+  '/password/forgot',
+  forgotPasswordLimiter,
+  validate(forgotPasswordSchema),
+  passwordController.forgotPassword,
+);
 
 /**
  * @openapi
@@ -216,7 +244,12 @@ router.post('/password/forgot', validate(forgotPasswordSchema), passwordControll
  *       400:
  *         description: Invalid or expired token
  */
-router.post('/password/reset', validate(resetPasswordSchema), passwordController.resetPassword);
+router.post(
+  '/password/reset',
+  resetPasswordLimiter,
+  validate(resetPasswordSchema),
+  passwordController.resetPassword,
+);
 
 /**
  * @openapi
@@ -272,6 +305,26 @@ router.post(
   validateMagicBytes(['image/jpeg', 'image/png', 'image/webp']),
   profileController.uploadPhoto,
 );
+
+/**
+ * @openapi
+ * /auth/profile/photo:
+ *   delete:
+ *     summary: Delete user profile photo
+ *     tags: [Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile photo deleted successfully
+ *       400:
+ *         description: User has no profile photo
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.delete('/profile/photo', authenticate, profileController.deleteProfilePhoto);
 
 /**
  * @openapi
