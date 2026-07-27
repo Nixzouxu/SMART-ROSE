@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, CookieOptions } from 'express';
 import * as authService from './auth.service';
 import { AuthRequest } from '@/middlewares/auth.middleware';
 import { env } from '@/config/env';
@@ -124,8 +124,13 @@ export const logout = async (req: AuthRequest, res: Response, next: NextFunction
       await authService.logoutUser(userId, token, deviceToken);
     }
 
-    res.clearCookie('refreshToken');
-    res.clearCookie('device_token');
+    res.clearCookie('refreshToken', getRefreshTokenCookieOptions());
+    res.clearCookie('device_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
     res.status(200).json({
       success: true,
       message: 'Berhasil logout',
@@ -135,18 +140,25 @@ export const logout = async (req: AuthRequest, res: Response, next: NextFunction
   }
 };
 
+const getRefreshTokenCookieOptions = (): CookieOptions => {
+  const isProduction = env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+  };
+};
+
 // Alasan keamanan:
 // Refresh token disimpan dalam httpOnly cookie untuk mencegah akses dari client-side script (XSS).
 // Cookie ini juga harus dikirim dengan opsi secure: true di production (HTTPS).
 const setRefreshTokenCookie = (res: Response, token: string) => {
-  const isProduction = env.NODE_ENV === 'production';
   // Parse expiration string like "1y" into ms (approx 365 days)
   const maxAge = 365 * 24 * 60 * 60 * 1000;
 
   res.cookie('refreshToken', token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: 'strict',
+    ...getRefreshTokenCookieOptions(),
     maxAge,
   });
 };
