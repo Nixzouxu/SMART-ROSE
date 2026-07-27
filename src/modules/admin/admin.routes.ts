@@ -496,5 +496,10 @@ router.put(
  *         description: Hanya ADMIN_UTAMA yang bisa trigger ini
  */
 router.post('/jobs/sla-check', requireRole(['ADMIN_UTAMA']), adminJobsController.triggerSlaCheck);
+router.post(
+  '/jobs/notification-retention',
+  requireRole(['ADMIN_UTAMA']),
+  adminJobsController.triggerNotificationRetention,
+);
 
 export default router;

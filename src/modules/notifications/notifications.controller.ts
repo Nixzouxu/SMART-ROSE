@@ -7,8 +7,14 @@ export const getMyNotifications = async (req: AuthRequest, res: Response, next: 
     const userId = req.user!.userId;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const includeArchived = req.query.includeArchived === 'true';
 
-    const result = await notificationsService.getUserNotifications(userId, page, limit);
+    const result = await notificationsService.getUserNotifications(
+      userId,
+      page,
+      limit,
+      includeArchived,
+    );
 
     res.status(200).json({
       success: true,

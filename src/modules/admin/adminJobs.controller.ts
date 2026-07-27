@@ -5,6 +5,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '@/middlewares/auth.middleware';
 import { runDailySlaCheck } from '@/jobs/dailySlaCheck.job';
+import { runNotificationRetentionSafe } from '@/jobs/notificationRetention.job';
 import { logger } from '@/utils/logger';
 
 /**
@@ -26,6 +27,38 @@ export const triggerSlaCheck = async (req: AuthRequest, res: Response, next: Nex
       data: {
         triggeredBy: req.user!.userId,
         triggeredAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /admin/jobs/notification-retention
+ * Trigger notification retention secara manual (untuk testing atau emergency).
+ * Hanya ADMIN_UTAMA yang bisa mengakses.
+ */
+export const triggerNotificationRetention = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    logger.info(
+      `[Admin Jobs] Notification retention di-trigger manual oleh admin ${req.user!.userId}`,
+    );
+
+    const { archived, deleted } = await runNotificationRetentionSafe();
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification retention berhasil dijalankan',
+      data: {
+        triggeredBy: req.user!.userId,
+        triggeredAt: new Date().toISOString(),
+        archivedCount: archived,
+        deletedCount: deleted,
       },
     });
   } catch (error) {
