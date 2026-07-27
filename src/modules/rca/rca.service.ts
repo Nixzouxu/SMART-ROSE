@@ -21,6 +21,9 @@ export class RcaService {
       data: {
         reportId,
         disusunOlehId,
+        timKetuaLegacyText: payload.timKetuaLegacyText,
+        timSekretarisLegacyText: payload.timSekretarisLegacyText,
+        timAnggotaLegacyText: payload.timAnggotaLegacyText,
         observasi: payload.observasi,
         dokumentasi: payload.dokumentasi,
         kronologiSingkat: payload.kronologiSingkat,
@@ -127,6 +130,9 @@ export class RcaService {
       return tx.rootCauseAnalysis.update({
         where: { id: existing.id },
         data: {
+          timKetuaLegacyText: payload.timKetuaLegacyText,
+          timSekretarisLegacyText: payload.timSekretarisLegacyText,
+          timAnggotaLegacyText: payload.timAnggotaLegacyText,
           observasi: payload.observasi,
           dokumentasi: payload.dokumentasi,
           kronologiSingkat: payload.kronologiSingkat,
