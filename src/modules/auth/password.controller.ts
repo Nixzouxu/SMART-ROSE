@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { hashPassword } from '@/utils/password';
 import { ApiError } from '@/utils/apiError';
 import { logger } from '@/utils/logger';
+import { env } from '@/config/env';
 
 export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -26,9 +27,16 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
       // Simpan di Redis selama 30 menit
       await redis.set(key, user.id, 'EX', 30 * 60);
 
+      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
       const subject = 'Reset Password SMART-ROSE';
-      const text = `Gunakan token berikut untuk mereset password Anda: ${resetToken}`;
-      const html = `<p>Gunakan token berikut untuk mereset password Anda: <strong>${resetToken}</strong></p>`;
+      const text = `Anda telah meminta reset password. Silakan gunakan link berikut untuk mereset password Anda: ${resetUrl}`;
+      const html = `
+        <p>Anda telah meminta reset password.</p>
+        <p>Silakan klik link berikut untuk mereset password Anda:</p>
+        <p><a href="${resetUrl}"><strong>Reset Password</strong></a></p>
+        <br>
+        <p><small>Link ini hanya berlaku selama 30 menit.</small></p>
+      `;
 
       await sendMail(email, subject, text, html);
     } else {

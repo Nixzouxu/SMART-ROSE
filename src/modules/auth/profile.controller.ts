@@ -206,3 +206,42 @@ export const uploadPhoto = async (req: AuthRequest, res: Response, next: NextFun
     next(error);
   }
 };
+
+export const deleteProfilePhoto = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new ApiError(404, 'User tidak ditemukan');
+    }
+
+    if (!user.fotoProfilPath) {
+      throw new ApiError(400, 'User tidak memiliki foto profil saat ini');
+    }
+
+    const storageProvider = getStorageProvider();
+
+    try {
+      await storageProvider.delete(user.fotoProfilPath);
+    } catch (err) {
+      logger.error({ err }, 'Failed to delete profile photo from storage');
+    }
+
+    await db.user.update({
+      where: { id: userId },
+      data: { fotoProfilPath: null },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Foto profil berhasil dihapus',
+      data: { avatarUrl: null },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
