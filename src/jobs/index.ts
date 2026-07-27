@@ -10,6 +10,7 @@
 import cron from 'node-cron';
 import { logger } from '@/utils/logger';
 import { runDailySlaCheck } from './dailySlaCheck.job';
+import { runNotificationRetentionSafe } from './notificationRetention.job';
 
 // Jadwal cron: setiap hari pukul 01:00 (server timezone = WIB/Asia/Jakarta)
 const CRON_JADWAL = '0 1 * * *';
@@ -28,6 +29,11 @@ export function initJobs(): void {
   // Jadwalkan dengan node-cron: setiap hari pukul 01:00
   cron.schedule(CRON_JADWAL, () => {
     runDailySlaCheckSafe();
+  });
+
+  // Jadwal cron: setiap hari pukul 02:00
+  cron.schedule('0 2 * * *', () => {
+    runNotificationRetentionSafe();
   });
 
   logger.info(

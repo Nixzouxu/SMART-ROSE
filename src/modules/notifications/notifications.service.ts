@@ -99,13 +99,21 @@ export const createAdminNotification = async (
   });
 };
 
-export const getUserNotifications = async (userId: string, page: number, limit: number) => {
+export const getUserNotifications = async (
+  userId: string,
+  page: number,
+  limit: number,
+  includeArchived: boolean = false,
+) => {
   const skip = (page - 1) * limit;
 
+  // Jika includeArchived false, exclude notifikasi yang sudah diarsipkan
+  const where = includeArchived ? { userId } : { userId, isArchived: false };
+
   const [total, items] = await Promise.all([
-    db.notification.count({ where: { userId } }),
+    db.notification.count({ where }),
     db.notification.findMany({
-      where: { userId },
+      where,
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -120,15 +128,19 @@ export const markAsRead = async (userId: string, id: string) => {
   if (!existing) throw new ApiError(404, 'Notifikasi tidak ditemukan');
   if (existing.userId !== userId) throw new ApiError(403, 'Akses ditolak');
 
+  if (existing.isRead) {
+    return existing;
+  }
+
   return db.notification.update({
     where: { id },
-    data: { isRead: true },
+    data: { isRead: true, readAt: new Date() },
   });
 };
 
 export const markAllAsRead = async (userId: string) => {
   await db.notification.updateMany({
     where: { userId, isRead: false },
-    data: { isRead: true },
+    data: { isRead: true, readAt: new Date() },
   });
 };
