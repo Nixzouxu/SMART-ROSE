@@ -64,9 +64,25 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             cd ~/smart-rose-backend
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml up -d
+            echo "Waiting for app container to be healthy..."
+            for i in {1..30}; do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' smart-rose-backend-app-1 2>/dev/null || echo "starting")
+              if [ "$STATUS" == "healthy" ]; then
+                echo "Container is healthy."
+                break
+              fi
+              echo "Attempt $i: status=$STATUS, waiting 2s..."
+              sleep 2
+            done
+            if [ "$STATUS" != "healthy" ]; then
+              echo "Error: app container failed to become healthy within timeout."
+              exit 1
+            fi
+            docker exec smart-rose-backend-app-1 npx prisma migrate deploy
             docker image prune -f
