@@ -6,6 +6,7 @@ import { swaggerSpec } from '@/config/swagger';
 import { requestLogger } from '@/middlewares/requestLogger.middleware';
 import { errorHandler } from '@/middlewares/error.middleware';
 import cookieParser from 'cookie-parser';
+import { env } from '@/config/env';
 import authRoutes from '@/modules/auth/auth.routes';
 import adminRoutes from '@/modules/admin/admin.routes';
 import reportsRoutes from '@/modules/reports/reports.routes';
@@ -32,9 +33,7 @@ export function createApp(): Application {
   app.use(
     cors({
       origin: (origin, callback) => {
-        const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
-          .split(',')
-          .map((o) => o.trim());
+        const allowedOrigins = env.FRONTEND_URL;
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {

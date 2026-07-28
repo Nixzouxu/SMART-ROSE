@@ -27,7 +27,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
       // Simpan di Redis selama 30 menit
       await redis.set(key, user.id, 'EX', 30 * 60);
 
-      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      const resetUrl = `${env.EMAIL_BASE_URL}/reset-password?token=${resetToken}`;
       const subject = 'Reset Password SMART-ROSE';
       const text = `Anda telah meminta reset password. Silakan gunakan link berikut untuk mereset password Anda: ${resetUrl}`;
       const html = `
