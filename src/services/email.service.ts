@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { env } from '@/config/env';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM || 'notifikasi@smartrose.id';
@@ -32,7 +33,7 @@ export async function sendNewReportNotification(
        <li><b>Jenis Insiden:</b> ${report.jenisInsiden}</li>
      </ul>`,
     'Lihat Laporan',
-    `https://smartrose.id/admin/reports?q=${report.trackingNumber}`,
+    `${env.EMAIL_BASE_URL}/admin/reports?q=${report.trackingNumber}`,
   );
 
   return resend.emails.send({
@@ -52,7 +53,7 @@ export async function sendStatusChangeNotification(
     `<p>Status laporan dengan nomor <b>${report.trackingNumber}</b> telah berubah:</p>
      <p>${report.statusLama} → <b>${report.statusBaru}</b></p>`,
     'Lihat Detail',
-    `https://smartrose.id/laporan/${report.trackingNumber}`,
+    `${env.EMAIL_BASE_URL}/laporan/${report.trackingNumber}`,
   );
 
   return resend.emails.send({
@@ -75,7 +76,7 @@ export async function sendAssignmentNotification(
        <li><b>Unit Kerja:</b> ${report.unitKerja}</li>
      </ul>`,
     'Mulai Investigasi',
-    `https://smartrose.id/admin/reports?q=${report.trackingNumber}`,
+    `${env.EMAIL_BASE_URL}/admin/reports?q=${report.trackingNumber}`,
   );
 
   return resend.emails.send({

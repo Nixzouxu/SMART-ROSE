@@ -10,7 +10,16 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
   APP_URL: z.string().url(),
-  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+  EMAIL_BASE_URL: z.string().url().default('http://localhost:3000'),
+  FRONTEND_URL: z
+    .string()
+    .default('http://localhost:3000')
+    .transform((str) =>
+      str
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL wajib diisi'),
   DIRECT_URL: z.string().min(1).optional(),
