@@ -1,12 +1,21 @@
 import { db as prisma } from '../src/config/db';
 import bcrypt from 'bcrypt';
+import { RoleType } from '@prisma/client';
 
 async function main() {
-  const email = 'ariyani.16r@gmail.com';
-  const password = process.env.SUPERADMIN_PASSWORD;
+  // Support backward compatibility (fallback ke nilai hardcode sebelumnya)
+  const email = process.env.NEW_ADMIN_EMAIL || 'ariyani.16r@gmail.com';
+  const password = process.env.NEW_ADMIN_PASSWORD || process.env.SUPERADMIN_PASSWORD;
+  
+  // Cast env var ke tipe enum RoleType, default ke 'ADMIN'
+  const role = (process.env.NEW_ADMIN_ROLE as RoleType) || 'ADMIN';
+  
+  const nama = process.env.NEW_ADMIN_NAMA || 'Ariyani';
+  const noPegawai = process.env.NEW_ADMIN_NO_PEGAWAI || 'SA-ARIYANI';
+  const unitKerja = process.env.NEW_ADMIN_UNIT_KERJA || 'Manajemen';
 
   if (!password) {
-    console.error('Error: Environment variable SUPERADMIN_PASSWORD is not set.');
+    console.error('Error: Environment variable NEW_ADMIN_PASSWORD (atau SUPERADMIN_PASSWORD) is not set.');
     console.error('Please set it before running this script.');
     process.exit(1);
   }
@@ -18,32 +27,32 @@ async function main() {
   });
 
   if (existingUser) {
-    console.log(`User ${email} already exists. Updating role and status...`);
+    console.log(`User ${email} already exists. Updating role to ${role} and status...`);
     await prisma.user.update({
       where: { email },
       data: {
-        role: 'ADMIN_UTAMA',
+        role,
         aktif: true,
         deletedAt: null,
         passwordHash, // memperbarui password ke yang baru diberikan
       },
     });
-    console.log(`Berhasil mengupdate akun ${email} menjadi ADMIN_UTAMA yang aktif.`);
+    console.log(`Berhasil mengupdate akun ${email} menjadi ${role} yang aktif.`);
   } else {
     console.log(`User ${email} does not exist. Creating new account...`);
     await prisma.user.create({
       data: {
-        nama: 'Ariyani',
+        nama,
         email,
-        noPegawai: 'SA-ARIYANI',
+        noPegawai,
         passwordHash,
-        role: 'ADMIN_UTAMA',
-        unitKerja: 'Manajemen',
+        role,
+        unitKerja,
         statusVerifikasi: 'APPROVED',
         aktif: true,
       },
     });
-    console.log(`Berhasil membuat akun baru ${email} sebagai ADMIN_UTAMA.`);
+    console.log(`Berhasil membuat akun baru ${email} sebagai ${role}.`);
   }
 }
 
