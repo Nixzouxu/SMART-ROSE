@@ -3,20 +3,19 @@ import bcrypt from 'bcrypt';
 import { RoleType } from '@prisma/client';
 
 async function main() {
-  // Support backward compatibility (fallback ke nilai hardcode sebelumnya)
-  const email = process.env.NEW_ADMIN_EMAIL || 'ariyani.16r@gmail.com';
+  const email = process.env.NEW_ADMIN_EMAIL;
   const password = process.env.NEW_ADMIN_PASSWORD || process.env.SUPERADMIN_PASSWORD;
   
   // Cast env var ke tipe enum RoleType, default ke 'ADMIN'
   const role = (process.env.NEW_ADMIN_ROLE as RoleType) || 'ADMIN';
   
-  const nama = process.env.NEW_ADMIN_NAMA || 'Ariyani';
-  const noPegawai = process.env.NEW_ADMIN_NO_PEGAWAI || 'SA-ARIYANI';
-  const unitKerja = process.env.NEW_ADMIN_UNIT_KERJA || 'Manajemen';
+  const nama = process.env.NEW_ADMIN_NAMA;
+  const noPegawai = process.env.NEW_ADMIN_NO_PEGAWAI;
+  const unitKerja = process.env.NEW_ADMIN_UNIT_KERJA;
 
-  if (!password) {
-    console.error('Error: Environment variable NEW_ADMIN_PASSWORD (atau SUPERADMIN_PASSWORD) is not set.');
-    console.error('Please set it before running this script.');
+  if (!email || !password || !nama || !noPegawai || !unitKerja) {
+    console.error('Error: Environment variables NEW_ADMIN_EMAIL, NEW_ADMIN_PASSWORD (atau SUPERADMIN_PASSWORD), NEW_ADMIN_NAMA, NEW_ADMIN_NO_PEGAWAI, dan NEW_ADMIN_UNIT_KERJA wajib diisi.');
+    console.error('Script ini tidak memiliki nilai default hardcode untuk argumen wajib tersebut.');
     process.exit(1);
   }
 
@@ -33,6 +32,7 @@ async function main() {
       data: {
         role,
         aktif: true,
+        statusVerifikasi: 'APPROVED',
         deletedAt: null,
         passwordHash, // memperbarui password ke yang baru diberikan
       },
