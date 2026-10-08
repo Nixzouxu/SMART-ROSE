@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalEnum } from '@/utils/zodHelpers';
 
 export const createReportSchema = z.object({
   body: z.object({
@@ -50,15 +51,19 @@ export const createReportPublicSchema = z.object({
     ruanganPasien: z.string().optional(),
     umurPasien: z.coerce.number().optional(),
     jenisKelaminPasien: z.string().optional(),
-    statusPasienSaatInsiden: z.enum(['RAWAT_INAP', 'RAWAT_JALAN', 'IGD', 'LAIN_LAIN']).optional(),
+    statusPasienSaatInsiden: optionalEnum(['RAWAT_INAP', 'RAWAT_JALAN', 'IGD', 'LAIN_LAIN']),
     penanggungBiaya: z.string().optional(),
     tanggalJamMasukRs: z.coerce.date().optional(),
-    kategoriPelaporPertama: z.enum(['PASIEN_SENDIRI', 'KELUARGA', 'STAF', 'LAIN_LAIN']).optional(),
+    kategoriPelaporPertama: optionalEnum(['PASIEN_SENDIRI', 'KELUARGA', 'STAF', 'LAIN_LAIN']),
     pihakTerlibat: z.array(z.string()).optional(),
     kasusSpesialisasi: z.string().optional(),
-    akibatTerhadapPasien: z
-      .enum(['SANGAT_RINGAN', 'RINGAN', 'SEDANG', 'BERAT', 'SANGAT_BERAT'])
-      .optional(),
+    akibatTerhadapPasien: optionalEnum([
+      'SANGAT_RINGAN',
+      'RINGAN',
+      'SEDANG',
+      'BERAT',
+      'SANGAT_BERAT',
+    ]),
     apakahKejadianSerupaPernahTerjadi: z.boolean().optional(),
     kejadianSerupaDetail: z.string().optional(),
     tindakanDilakukan: z.string().optional(),
