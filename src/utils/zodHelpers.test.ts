@@ -14,13 +14,13 @@ describe('optionalEnum helper', () => {
     if (result.success) expect(result.data).toBeUndefined();
   });
 
-  it('lolos jika string kosong ("") — dikonversi ke undefined', () => {
+  it('lolos jika string kosong ("") dan dikonversi ke undefined', () => {
     const result = schema.safeParse('');
     expect(result.success).toBe(true);
     if (result.success) expect(result.data).toBeUndefined();
   });
 
-  it('lolos jika null — dikonversi ke undefined', () => {
+  it('lolos jika null dan dikonversi ke undefined', () => {
     const result = schema.safeParse(null);
     expect(result.success).toBe(true);
     if (result.success) expect(result.data).toBeUndefined();
@@ -34,20 +34,47 @@ describe('optionalEnum helper', () => {
     }
   });
 
-  // ── Nilai yang HARUS ditolak ────────────────────────────────────────────
+  // ── Label tampilan dari frontend HARUS dinormalkan ke nilai enum ────────
 
-  it('ditolak untuk string dengan huruf campuran (camelCase/sentence case)', () => {
+  it('menormalkan sentence case ke nilai enum ("Rawat Jalan")', () => {
     const result = schema.safeParse('Rawat Jalan');
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe('RAWAT_JALAN');
   });
 
-  it('ditolak untuk string lowercase (bukan format enum)', () => {
+  it('menormalkan lowercase ke nilai enum ("rawat_jalan")', () => {
     const result = schema.safeParse('rawat_jalan');
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe('RAWAT_JALAN');
   });
+
+  it('menormalkan label dengan tanda hubung ke nilai enum ("Lain-lain")', () => {
+    const result = schema.safeParse('Lain-lain');
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe('LAIN_LAIN');
+  });
+
+  it('menormalkan label yang punya spasi di awal dan akhir', () => {
+    const result = schema.safeParse('  Rawat Inap  ');
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe('RAWAT_INAP');
+  });
+
+  it('menormalkan singkatan huruf besar yang sudah sama dengan enum ("igd")', () => {
+    const result = schema.safeParse('igd');
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe('IGD');
+  });
+
+  // ── Nilai yang HARUS tetap ditolak ──────────────────────────────────────
 
   it('ditolak untuk nilai string acak yang tidak ada di enum', () => {
     const result = schema.safeParse('INVALID_STATUS');
+    expect(result.success).toBe(false);
+  });
+
+  it('ditolak untuk label yang mirip tapi bukan anggota enum', () => {
+    const result = schema.safeParse('Rawat Darurat');
     expect(result.success).toBe(false);
   });
 
@@ -63,7 +90,7 @@ describe('optionalEnum helper', () => {
 
   // ── Verifikasi integrasi dengan schema lengkap ──────────────────────────
 
-  it('bekerja dalam konteks object schema — field hilang dianggap undefined (lolos)', () => {
+  it('bekerja dalam konteks object schema: field hilang dianggap undefined (lolos)', () => {
     const objSchema = z.object({ status: optionalEnum([...STATUS_VALUES]) });
 
     const result = objSchema.safeParse({});
@@ -71,7 +98,7 @@ describe('optionalEnum helper', () => {
     if (result.success) expect(result.data.status).toBeUndefined();
   });
 
-  it('bekerja dalam konteks object schema — string kosong dari form dikonversi ke undefined', () => {
+  it('bekerja dalam konteks object schema: string kosong dari form dikonversi ke undefined', () => {
     const objSchema = z.object({ status: optionalEnum([...STATUS_VALUES]) });
 
     const result = objSchema.safeParse({ status: '' });
@@ -79,11 +106,19 @@ describe('optionalEnum helper', () => {
     if (result.success) expect(result.data.status).toBeUndefined();
   });
 
-  it('bekerja dalam konteks object schema — nilai enum valid diteruskan apa adanya', () => {
+  it('bekerja dalam konteks object schema: nilai enum valid diteruskan apa adanya', () => {
     const objSchema = z.object({ status: optionalEnum([...STATUS_VALUES]) });
 
     const result = objSchema.safeParse({ status: 'IGD' });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.status).toBe('IGD');
+  });
+
+  it('bekerja dalam konteks object schema: label "Rawat Jalan" dinormalkan ke RAWAT_JALAN', () => {
+    const objSchema = z.object({ status: optionalEnum([...STATUS_VALUES]) });
+
+    const result = objSchema.safeParse({ status: 'Rawat Jalan' });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.status).toBe('RAWAT_JALAN');
   });
 });
